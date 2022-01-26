@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--代表整个Servlet容器组件，是最顶层元素。它里面可以有多个Service标签-->
+<Server port="8005" shutdown="SHUTDOWN">
+    <!--Tomcat运行所需的监听器-->
+    <!--默认的生命周期监听器：在server初始化之前打印操作系统、JVM及服务器的版本信息-->
+    <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+    <!-- 默认的生命周期监听器：在server初始化之前加载APR库，并在server停止后销毁 -->
+    <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+    <!-- 默认的生命周期监听器：server初始化之前调用，解决单例对象创建导致的jVM内存泄露问题以及锁文件问题 -->
+    <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+    <!-- 默认的生命周期监听器：Server启动时将JNDI资源注册为MBean进行管理 -->
+    <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+    <!-- 默认的生命周期监听器：在context停止时重建Executor池中的线程，避免内存泄露 -->
+    <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+    <!--全局资源配置， 解析到此节点时开始创建JNDI上下文 -->
+    <GlobalNamingResources>
+        <Resource name="UserDatabase" auth="Container"
+                  type="org.apache.catalina.UserDatabase"
+                  description="User database that can be updated and saved"
+                  factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+                  pathname="conf/tomcat-users.xml" />
+    </GlobalNamingResources>
+    <!--配置的是Tomcat的服务包含<Engine>元素和<Connector>元素。其中<Connector>可以是一个，也可以是多个，且他们共享引擎<Engine>的配置-->
+    <Service name="Catalina">
+        <!-- 配置共享线程池：默认的线程池实现为StandardThreadExecutor，可以通过标签的className属性指定Catalina共享线程池的级别为Service，默认情况下不配置共享线程池-->
+        <!-- <Executor name="tomcatThreadPool" namePrefix="catalina-exec-" maxThreads="150" minSpareThreads="4"/>-->
+
+        <!--配置的是连接器，其中包括连接的端口和使用协议
+            port：指定端口号
+            protocol：指定协议名称
+            connectionTimeout：连接超时时间
+            redirectPort：当资源必须以https协议访问时，tomcat会重定向此端口访问。
+        -->
+        <Connector port="8080" protocol="HTTP/1.1"  connectionTimeout="20000" redirectPort="8443" />
+        <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+        <!--配置引擎
+            name:引擎名称
+            defaultHost:虚拟主机的引用-->
+        <Engine name="Catalina" defaultHost="localhost">
+            <!--配置Tomcat的Realm域，安全空间-->
+            <Realm className="org.apache.catalina.realm.LockOutRealm">
+                <Realm className="org.apache.catalina.realm.UserDatabaseRealm" resourceName="UserDatabase"/>
+            </Realm>
+            <!--配置虚拟主机。
+                   name：主机名称
+                   appBase：应用默认发布目录
+                   unpackWARs：是否自动解压war包
+                   autoDeploy：是否自动发布-->
+            <Host name="localhost"  appBase="webapps" unpackWARs="true" autoDeploy="true">
+                <!-- 日志的valve拦截 -->
+                <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+                       prefix="localhost_access_log" suffix=".txt"
+                       pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+                <!--配置具体应用项目。
+                    docBase是项目的位置，可以是绝对路径，也可以是相对路径。如果是相对路径，则必须发布在虚拟主机的应用默认发布目录下。
+                    path是指定访问该Web应用的URI
+                    reloadable是指定是否重新加载/WEB-INF/classes和/WEB-INF/lib目录下改动后的内容-->
+                <!--<Context docBase="tomcat" path="/tomcat" reloadable="true"/>-->
+            </Host>
+        </Engine>
+    </Service>
+</Server>
