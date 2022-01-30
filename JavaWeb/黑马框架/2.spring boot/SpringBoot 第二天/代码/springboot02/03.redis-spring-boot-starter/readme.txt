@@ -1,0 +1,1 @@
+starter和autoconfigure两个模块互相配置，可以实现在引入坐标时自动创建bean

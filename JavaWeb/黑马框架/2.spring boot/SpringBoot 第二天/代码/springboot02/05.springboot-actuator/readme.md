@@ -1,0 +1,2 @@
+springboot提供Actuator监控模块，可以方便的监控运行的状态
+只需要引入坐标，就可以访问http://localhost:8080/acruator轻松查看

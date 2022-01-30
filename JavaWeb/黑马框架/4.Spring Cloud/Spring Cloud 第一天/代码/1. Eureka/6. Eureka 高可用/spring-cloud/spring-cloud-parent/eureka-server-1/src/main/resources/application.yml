@@ -1,0 +1,19 @@
+server:
+  port: 8761 # 在一个服务器里配置多个server，靠端口区分
+
+
+eureka:
+  instance:
+    hostname: eureka-server1 # 主机名也得改，不能叫localhost了。
+    # 改了这个名字后还要去改本机的host文件，让eureka-server1映射到127.0.0.1
+  client:
+    service-url:
+      defaultZone: http://eureka-server2:8762/eureka
+      # 这里要相互注册，server1注册server2的地址
+    register-with-eureka: true # 是否将自己的路径 注册到eureka上。eureka server 不需要的，eureka provider client 需要
+    fetch-registry: true # 是否需要从eureka中抓取路径。eureka server 不需要的，eureka consumer client 需要
+
+
+spring:
+  application:
+    name: eureka-server-ha

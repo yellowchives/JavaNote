@@ -1,0 +1,4 @@
+最简单的springboot项目
+springboot在创建项目时，使用jar的打包方式
+springboot的启动类，是项目入口，运行main方法就可以启动项目
+使用springboot构建项目的方式和spring完全一样，只是简化了配置

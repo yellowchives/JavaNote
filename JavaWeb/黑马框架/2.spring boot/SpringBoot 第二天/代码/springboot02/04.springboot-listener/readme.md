@@ -1,0 +1,3 @@
+springboot提供了几个监听器接口，实现接口即可监听事件
+ApplicationRunner、CommandLineRunner在项目启动时会自动执行
+另外两个需要配置一下才会执行。配置文件都是META-INF/spring.factories

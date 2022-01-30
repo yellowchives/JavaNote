@@ -1,0 +1,10 @@
+ribbon是netflix提供的客户端负载均衡工具，导入了eureka坐标也会自动加入ribbon
+ribbon还可以简化远程调用，代替RestTemplate远程调用。但是这两种其实都不是最常用的
+
+只要使用了ribbon来发送远程调用，如果注册中心有同名的服务提供者，ribbon会自动缓存多个地址，智能的选择调用哪一个提供者。这一切都是自动进行的，只需要加上简单的注解。
+
+也可以配置负载均衡的策略，默认是轮询。因为是客户端负载均衡工具，所以是在consumer中配置。
+MyRule类就是配置ribbion负载均衡的类。然后在启动类上启用负载均衡的配置。
+也可以在application.yml中配置，这种比较麻烦
+
+在使用springcloud ribbon客户端负载均衡的时候，可以给RestTemplate bean 加一个@LoadBalanced注解，就能让这个RestTemplate在请求时拥有客户端负载均衡的能力

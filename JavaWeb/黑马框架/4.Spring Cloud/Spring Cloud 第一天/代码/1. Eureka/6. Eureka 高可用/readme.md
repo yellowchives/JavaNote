@@ -1,0 +1,3 @@
+eureka负载均衡
+
+配置了两台server，关键是这两个server要互相注册

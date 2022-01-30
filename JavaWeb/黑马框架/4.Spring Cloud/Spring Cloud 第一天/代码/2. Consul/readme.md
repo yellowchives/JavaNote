@@ -1,0 +1,6 @@
+consul需要下载安装包。解压后只有一个exe文件
+consul和eureka的区别就是eureka需要自己搭建server。
+
+在shell中 .\consul agent -dev就可以运行了
+consul也提供了一个dashboard，访问locolhost:8500即可
+consul的配置也和eureka很像。而且只用修改配置文件，业务代码不用修改，因为他们都是通过DiscoveryCliet来获取url的。

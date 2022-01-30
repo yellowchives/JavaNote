@@ -1,0 +1,5 @@
+spring-cloud-gateway功能比较强大
+
+网关可以进行路由转发，nginx也可以实现
+还可以对请求进行拦截过滤，提供两种过滤方式pre、post
+过滤器有两种类型：局部过滤器GatewayFilter 和 全局过滤器GlobalFilter

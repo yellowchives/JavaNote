@@ -1,0 +1,5 @@
+springBoot提供了许多Enable开头的注解，都是用来动态开启某些功能的
+这些注解底层原理是使用@Import导入一个配置类，显示bean的动态加载
+
+enable-other模块提供了简单的bean，现在我们在当前pom.xml中引入了enable-other的依赖，但是无法注入other模块的bean
+因为我们不能直接注入jar包里的bean。要想注入，需要设置@ComponentScan

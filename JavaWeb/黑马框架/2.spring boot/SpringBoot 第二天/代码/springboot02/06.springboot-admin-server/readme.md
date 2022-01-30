@@ -1,0 +1,3 @@
+actuator可以监控springboot的项目的运行，但是不直观
+admin-server提供了好用的UI界面
+只需要导入server坐标就可以将当前项目变成一个服务器，同时在我们想要监控的项目里导入client坐标
