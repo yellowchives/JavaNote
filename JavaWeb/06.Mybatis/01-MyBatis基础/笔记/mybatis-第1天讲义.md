@@ -14,7 +14,7 @@ typora-copy-images-to: img
 
   ![1590919723185](img/1590919723185.png)
 
-​ 
+ 
 
 #### 1.2 ORM介绍
 
@@ -221,7 +221,7 @@ public class StudentController {
 
 #### 2.1 Resources
 
-* org.apache.ibatis.io.Resources：加载资源的工具类。
+* org.apache.ibatis.io.Resources：加载配置文件的工具类。
 
 * 核心方法
 
@@ -294,7 +294,7 @@ SqlSession 实例在 MyBatis 中是非常强大的一个类。在这里你会看
 
   ![1590917699865](img/1590917699865.png)
 
-####3.3 新增功能 
+#### 3.3 新增功能 
 
 - <insert>：新增功能标签。
 
