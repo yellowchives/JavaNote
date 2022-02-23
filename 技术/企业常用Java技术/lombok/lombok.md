@@ -107,5 +107,5 @@ lombok会在编译时将setter、getter等方法插入编译后的字节码文�
    }
    ```
 
-   
+8. @EqualsAndHashCode：生成hashCode和equals方法。很少单独使用，因为@Data包含了。
 
