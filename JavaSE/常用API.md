@@ -729,6 +729,8 @@ public class Test02 {
 
 ![](常用API.assets/2021-07-26_18-08-22.jpg)
 
+**arrayCopy() 方法拷贝数组效率很高，是一个native方法。推荐使用。**
+
 实例：在控制台输出1-10000，计算这段代码执行了多少毫秒
 
 ```java
@@ -793,6 +795,29 @@ Runtime类用于表示虚拟机运行时的状态，它用于封装JVM虚拟机�
   
 * 注意
   自定义类型的数组要使用Arrays.sort()，那么此类必须实现Comparable，重写compareTo方法，或者给Arrays.sort()方法传入一个外部比较器Comparator。
+
+## MessageDigest
+
+用来做一些加密的工具类。
+
+```java
+@Test
+public void test() throws NoSuchAlgorithmException {
+    String password = "123456";
+    //选择加密方式
+    MessageDigest md5 = MessageDigest.getInstance("md5");
+    //对明文计算md5的摘要
+    byte[] bytes= md5.digest(password.getBytes(StandardCharsets.UTF_8));
+    System.out.println(Arrays.toString(bytes));//[-31, 10, -36, 57, 73, -70, 89, -85, -66, 86, -32, 87, -14, 15, -120, 62]
+    System.out.println(new String(bytes,StandardCharsets.UTF_8));//乱码字符
+
+    //向数据库保存还需要编码，常用Bae64
+    String savedPw = Base64.getEncoder().encodeToString(bytes);
+    System.out.println(savedPw); //4QrcOUm6Wau+VuBX8g+IPg== 密文
+}
+```
+
+
 
 ## 时间日期类
 
