@@ -1,5 +1,7 @@
 # SpringBoot表单输入校验
 
+[Spring Boot配合Hibernate Validator参数校验 | MrBird](https://mrbird.cc/Spring-Boot-Hibernate-Validator-Params-Check.html)
+
 Spring支持 Bean Validation API（JSR-303）。这样的话，我们能够更容易地声明检验规则，而不必在应用程序代码中显式编写声明逻辑。
 
 使用表单校验的步骤：
@@ -83,12 +85,7 @@ public class NotValidArgumentsHandler {
 }
 ```
 
-如果不是接受POJO参数，需要将校验规则卸载参数前，将@Validated加到方法上：
-
-```java
-```
-
-
+如果不是接受POJO参数，需要将校验规则加到参数前，将@Validated加到类上。
 
 @RequestParam("name") 也会判断参数里有没有 name, 如果没有会抛出 MissingServletRequestParameterException。可以统一异常处理：
 
