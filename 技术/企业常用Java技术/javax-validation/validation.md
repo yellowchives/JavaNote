@@ -85,7 +85,24 @@ public class NotValidArgumentsHandler {
 }
 ```
 
-如果不是接受POJO参数，需要将校验规则加到参数前，将@Validated加到类上。
+如果方法参数是基本类型，可以添加@NotNull等校验，同时把@Validated加到类上。如果参数是对象，把@NotNull等校验规则加到类的定义处，同时在方法参数前加上@Validated。
+
+```java
+@RestController
+@Validated
+public class HelloController {
+
+    @GetMapping("/test2")
+    public String test2(@NotBlank(message = "姓名不能为空") String name, @Validated @Email(message = "邮箱号格式不正确") String email) {
+        return name;
+    }
+
+    @PostMapping("/test")
+    public String test1(@Validated @RequestBody User user) {
+        return user.toString();
+    }
+}
+```
 
 @RequestParam("name") 也会判断参数里有没有 name, 如果没有会抛出 MissingServletRequestParameterException。可以统一异常处理：
 

@@ -107,5 +107,7 @@ lombok会在编译时将setter、getter等方法插入编译后的字节码文�
    }
    ```
 
-8. @EqualsAndHashCode：生成hashCode和equals方法。很少单独使用，因为@Data包含了。
+8. @EqualsAndHashCode：生成hashCode和equals方法。很少单独使用，因为@Data包含了。更常见的是@EqualsAndHashCode(callSuper = true)，这样就可以比较从父类集成的属性是否相同了。
+
+9. @SuperBuilder：当存在继承关系时，比如Parent类有address属性，使用Son类的builder方法是无法为父类的address设置属性的。lombok1.8提供了解决方法，只要给父类和子类都加上@SuperBuilder，子类也可以直接设置从父类集成来的属性了。
 
