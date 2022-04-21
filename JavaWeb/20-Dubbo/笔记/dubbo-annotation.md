@@ -33,7 +33,9 @@
      consumer:
        check: false
        retries: 0
-       timeout: 50000
+       timeout: 5000
+     provider:
+     	delay: 5000
      protocol:
        name: dubbo
        port: -1
