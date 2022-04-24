@@ -24,6 +24,19 @@
 2. nacos配置：以下配置需要SpringBoot环境
 
    ```yaml
+   spring:
+     cloud:
+       nacos:
+         config:
+           server-addr: 123.57.251.70:8848
+           namespace: ${spring.profiles.active}
+           prefix: fp-homework
+           group: FRONT_GROUP
+           file-extension: yml
+           timeout: 5000
+           #username: learnable
+           #password: learnable@AI
+   
    dubbo:
      application:
        name: fp-homework
@@ -42,6 +55,19 @@
    ```
 
    ```yaml
+   spring:
+     cloud:
+       nacos:
+         config:
+           server-addr: 123.57.251.70:8848
+           namespace: ${spring.profiles.active}
+           prefix: dm-homework
+           group: DOMAIN_GROUP
+           file-extension: yml
+           timeout: 5000
+           #username: learnable
+           #password: learnable@AI
+   
    dubbo:
      application:
        name: dm-homework
@@ -54,6 +80,7 @@
      protocol:
        name: dubbo
        port: -1
+   
    ```
 
 3. provider项目:
@@ -130,6 +157,4 @@
           }
       }
       ```
-
-      
 
