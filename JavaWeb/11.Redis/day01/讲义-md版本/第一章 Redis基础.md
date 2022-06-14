@@ -1830,3 +1830,218 @@ AOF持久化策略使用everysecond，每秒钟fsync一次。该策略redis仍�
 - 如能承受数分钟以内的数据丢失，且追求大数据集的恢复速度，选用RDB
 - 灾难恢复选用RDB
 - 双保险策略，同时开启 RDB和 AOF，重启后，Redis优先使用 AOF 来恢复数据，降低丢失数据的量
+
+# RedisUtil
+
+```java
+package com.learnable.front.homework.common.utils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.StringRedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+@Component
+public class RedisUtil {
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    public void set(String key,String value){
+        try{
+            redisTemplate.opsForValue().set(key,value);
+        }catch (Exception e){
+            log.error("redis set 失败 key：{}，value：{}", key, value);
+        }
+    }
+
+    public void set(String key, String value, long expireTime){
+        try{
+            redisTemplate.opsForValue().set(key, value, expireTime, TimeUnit.SECONDS);
+        }catch (Exception e){
+            log.error("redis set 失败 key：{}，value：{}, expireTime:{}", key, value, expireTime);
+        }
+    }
+
+    public String get(String key){
+        try{
+            String value = redisTemplate.opsForValue().get(key);
+            return value;
+        }catch (Exception e){
+            log.error("redis get 失败 key：{}", key);
+        }
+        return null;
+    }
+
+    public Map<String, String> batchGet(List<String> keys){
+        List<Object> redisResultList = redisTemplate.executePipelined((RedisCallback<?>) redisConnection -> {
+            StringRedisConnection StringRedisConnection = (StringRedisConnection) redisConnection;
+            keys.forEach(StringRedisConnection::get);
+            return null;
+        });
+        Map<String, String> resultMap = Collections.synchronizedMap(new HashMap<String, String>());
+        keys.forEach(key ->{
+            resultMap.put(key, (String) redisResultList.get(keys.indexOf(key)));
+        });
+        return resultMap;
+    }
+
+    public void batchSet(Map<String, String> values, long expireTime){
+        redisTemplate.executePipelined((RedisCallback<Object>) redisConnection -> {
+            StringRedisConnection stringRedisConnection = (StringRedisConnection)redisConnection;
+            values.forEach((key, value) -> {
+                stringRedisConnection.set(key, value);
+                stringRedisConnection.expire(key, expireTime);
+            });
+            return null;
+        });
+    }
+
+    public void delete(String key){
+        try{
+            redisTemplate.delete(key);
+        }catch (Exception e){
+            log.error("redis delete 失败 key：{}", key);
+        }
+    }
+
+    public boolean addLock(String key, long expireTime){
+        try {
+            boolean result = redisTemplate.opsForValue().setIfAbsent(key, "addLock", expireTime, TimeUnit.SECONDS);
+            if(!result){
+                addLock(key, expireTime);
+            }
+            return result;
+        }catch (Exception e){
+            log.error("获取锁失败 key:{}", key, e);
+        }
+        return true;
+    }
+
+    public boolean addLock(String key, String value, long expireTime){
+        try {
+            return redisTemplate.opsForValue().setIfAbsent(key, value, expireTime, TimeUnit.SECONDS);
+        }catch (Exception e){
+            log.error("获取锁失败 key:{}", key, e);
+        }
+        return false;
+    }
+
+    public void delete(String key, String value){
+        try{
+            String lockValue = redisTemplate.opsForValue().get(key);
+            if(value.equals(lockValue)){
+                redisTemplate.delete(key);
+            }else{
+                throw new RuntimeException();
+            }
+        }catch (Exception e){
+            log.error("redis delete 失败 key：{}", key);
+        }
+    }
+
+    public boolean addLock(String key, String value, long expireTime, int retryTime){
+        boolean result = addLock(key, value, expireTime);
+        while (!result && retryTime-- >0){
+            try {
+                Thread.sleep(1000);
+                log.error("获取锁失败 key:{},重试剩余次数", key, retryTime);
+            } catch (InterruptedException e) {
+                log.error("获取锁失败 key:{}", key, e);
+            }
+            result = addLock(key, value, expireTime);
+        }
+        return result;
+    }
+
+    public void listLeftPush(String key, String value) {
+        try {
+            redisTemplate.opsForList().leftPush(key, value);
+        } catch (Exception e) {
+            log.error("redis listLeftPush 失败 key：{}，value：{}", key, value);
+        }
+    }
+
+    public void listLeftPushAll(String key, List<String> valueList) {
+        try {
+            redisTemplate.opsForList().leftPushAll(key, valueList);
+        } catch (Exception e) {
+            log.error("redis listLeftPushAll 失败 key：{}，valueList：{}", key, valueList);
+        }
+    }
+
+    public void listRightPush(String key, String value) {
+        try {
+            redisTemplate.opsForList().rightPush(key, value);
+        } catch (Exception e) {
+            log.error("redis rightPush 失败 key：{}，value：{}", key, value);
+        }
+    }
+
+    public void listRightPushAll(String key, List<String> valueList) {
+        try {
+            redisTemplate.opsForList().rightPushAll(key, valueList);
+        } catch (Exception e) {
+            log.error("redis listRightPushAll 失败 key：{}，valueList：{}", key, valueList);
+        }
+    }
+
+    public String listLeftPop(String key) {
+        try {
+            String value = redisTemplate.opsForList().leftPop(key);
+            return value;
+        } catch (Exception e) {
+            log.error("redis leftPop 失败 key：{}", key);
+        }
+        return null;
+    }
+
+    public String listRightPop(String key) {
+        try {
+            String value = redisTemplate.opsForList().rightPop(key);
+            return value;
+        } catch (Exception e) {
+            log.error("redis rightPop 失败 key：{}", key);
+        }
+        return null;
+    }
+
+    public Integer getListSize(String key) {
+        try {
+            Long value = redisTemplate.opsForList().size(key);
+            return Integer.valueOf(value.toString());
+        } catch (Exception e) {
+            log.error("redis 获取队列长度 失败 key：{}", key);
+        }
+        return null;
+    }
+
+    public Set<String> keys(String pattern) {
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            return keys;
+        } catch (Exception e) {
+            log.error("redis 获取keys 失败 pattern：{}", pattern);
+        }
+        return null;
+    }
+
+    public Long delete(Set<String> keys) {
+        try {
+            Long result = redisTemplate.delete(keys);
+            return result;
+        } catch (Exception e) {
+            log.error("redis delete 失败 keys：{}", keys);
+        }
+        return null;
+    }
+}
+```
+
