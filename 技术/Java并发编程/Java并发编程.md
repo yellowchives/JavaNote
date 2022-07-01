@@ -127,9 +127,9 @@ public static void main(String[] args) {
 
 java中创建线程，主要有3种方法：
 
-- 实现runnable接口的run方法；
-- 继承Thread类并重写run方法；
-- 使用FutureTask方式
+- 继承Thread类，重写run方法
+- 实现runable接口
+- 实现callable接口
 
 一般工程里不允许1、2这种直接new一个线程去做任务，这样的线程叫“野线程”，正规的是用线程池创建工作线程执行任务。
 
