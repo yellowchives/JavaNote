@@ -12,11 +12,11 @@ https://www.cnblogs.com/dolphin0520/p/3910667.html
 
 ## 2、为什么要多线程？
 
-这问题感觉有点白痴...
-
 （1）“多”：多个线程执行不同的子任务，提高CPU的利用率；
 
 （2）“线程”：线程可以看做是轻量级的进程，线程间的切换调度的开销远比进程间的小；
+
+（3）“线程”之间共享数据比进程之间更简单；
 
 ## 3、线程间的调度算法和多线程中的上下文切换
 
@@ -44,6 +44,8 @@ Java线程可以分为两类：用户线程和守护线程。
 
 ## 5、线程状态和优先级
 
+https://tobebetterjavaer.com/thread/thread-state-and-method.html
+
 **线程的状态**
 
 **（1）new**
@@ -52,7 +54,9 @@ Java线程可以分为两类：用户线程和守护线程。
 
 **（2）runnable**
 
-一旦调用了start方线程会进入runnable（就绪）状态，此时线程并没有运行，而是等待CPU临幸自己，当线程进入了CPU给它的时间片后，才真正进入了运行（running）状态。
+一旦调用了start方线程会进入runnable（就绪）状态，此时线程并没有运行，而是等待CPU临幸自己，当线程进入了CPU给它的时间片后，才真正进入了运行（running）状态。一个线程只能调用start方法一次。
+
+> Java线程的**RUNNABLE**状态其实是包括了传统操作系统线程的**ready**和**running**两个状态的。
 
 **（3）running**
 
@@ -62,9 +66,23 @@ Java线程可以分为两类：用户线程和守护线程。
 
 当线程等待另一个线程通知调度器一个条件时，该线程进入等待状态（waiting），当线程得到调度器通知可以被唤醒时，线程会重新进入runnable状态。
 
+调用如下3个方法会使线程进入等待状态：
+
+> - Object.wait()：使当前线程处于等待状态直到另一个线程唤醒它；
+> - Thread.join()：等待线程执行完毕，底层调用的是Object实例的wait方法；
+> - LockSupport.park()：除非获得调用许可，否则禁用当前线程进行线程调度。
+
 **（5）time waiting**
 
 计时等待，比waiting多了个条件，当休眠的时间超过设置的时，线程也会被唤醒，重新进入runnable状态。
+
+> 调用如下方法会使线程进入超时等待状态：
+>
+> - Thread.sleep(long millis)：使当前线程睡眠指定时间；
+> - Object.wait(long timeout)：线程休眠指定时间，等待期间可以通过notify()/notifyAll()唤醒；
+> - Thread.join(long millis)：等待当前线程最多执行millis毫秒，如果millis为0，则会一直执行；
+> - LockSupport.parkNanos(long nanos)： 除非获得调用许可，否则禁用当前线程进行线程调度指定时间；
+> - LockSupport.parkUntil(long deadline)：同上，也是禁止线程进行调度指定时间；
 
 **（6）blocked**
 
@@ -77,20 +95,13 @@ Java线程可以分为两类：用户线程和守护线程。
 - run方法正常退出而自然消亡；
 - 执行run方法时抛出没有捕获的异常而非正常死亡。
 
-![img](Java并发编程.assets/v2-d87fb1c80a2362125ab446abeca854d1_720w.jpg)
+![](Java并发编程.assets/thread-state-and-method-18f0d338-1c19-4e18-a0cc-62e97fc39272.png)
 
 **线程的优先级**
 
 - 线程的优先级用数字来表示，优先级在MIN_PRIORITY(1)和MAX_PRIORITY(10)之间，缺省时为NORM_PRIORITY(5)；
 - 设置和获得线程对象的优先级：int getPriority(); void setPriority(int newPriority);
 - 注意：线程优先级低只是意味着获得调度的概率低，并不是绝对先调用优先级高的线程后调用优先级低的线程。
-
-作者：一个废物
-链接：https://zhuanlan.zhihu.com/p/108920487
-来源：知乎
-著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
-
-
 
 ## 6、同步和异步
 
