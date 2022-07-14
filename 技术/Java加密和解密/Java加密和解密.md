@@ -18,56 +18,69 @@
 
 非对称加密算法是数据传输加密的常用算法，又称双钥密码算法或公钥密码算法。典型代表是RSA、ECC算法
 
-对称加密算法也可以用做数据传输加密，但非对称加密算法在密钥管理方面更有优势。相对对称加密算法而言，非对称加密算法在安全级别上等级更高，但非对称加密算法在时间效率上远不如对称加密算法。
+对称加密算法也可以用做数据传输加密，但非对称加密算法在密钥管理方面更有优势。相对对称加密算法而言，非对称加密算法在安全级别上等级更高，但非对称加密算法在时间效率上远不如对称加密算法，非对称加密需要的密钥长度远大于对称加密。
 
 ## 密码学术语
 
-* 明文：plain text
-* 密文：cipher text
+* 明文：plaintext
+* 密文：ciphertext
 * 加密：encryption
 * 解密：decryption
 * 密码分析：cryptanalysis
-* 被动攻击：passive attack，指对一个保密系统采取截获密文并对密文进行分析和攻击的行为。这种攻击对密文没有破坏作用。
-* 主动攻击：active attack，指攻击者非法入侵密码系统，采用伪造、修改、删除等手段向系统注入假消息进行欺骗的行为。这种攻击对密文具有破坏作用。
-* 柯克霍夫原则Kerckhoffs' Principle：数据的安全基于密钥而不是算法的保密。也就是说算法可以公开，但是密钥必须保密。这是现代密码学设计的基本原则。古典密码学主要是保密算法，而现代密码学是保密密钥。
-* 对称密码算法：symmetric cipher
-* 非对称密码系统：asymmetric cipher
+* 密钥空间：keyspace，一种密码能够使用的所有密钥的集合
+* 被动攻击：passiveattack，指对一个保密系统采取截获密文并对密文进行分析和攻击的行为。这种攻击对密文没有破坏作用。
+* 主动攻击：activeattack，指攻击者非法入侵密码系统，采用伪造、修改、删除等手段向系统注入假消息进行欺骗的行为。这种攻击对密文具有破坏作用。
+* 柯克霍夫原则Kerckhoffs'Principle：数据的安全基于密钥而不是算法的保密。也就是说算法可以公开，但是密钥必须保密。这是现代密码学设计的基本原则。古典密码学主要是保密算法，而现代密码学是保密密钥。
+* 对称密码算法：symmetriccipher
+* 非对称密码系统：asymmetriccipher
 
-## Java API
+## 对称加密
 
-Java API支持多种加密算法。如MessageDigest类，可以构建MD5、SHA两种加密算法；Mac类可以构建HMAC加密算法；Cipher类可以构建多种加密算法，如DES、AES、Blowfish对称加密算法，以及RSA、DSA、DH等多种非对称加密算法；Signature类可以用于数字签名和签名验证；Certificate类可用于操作证书；等等。
+### 基本原理
+
+使用异或运算，因为`a^b^b=a`，这里的a相当于明文的比特序列，b相当于密钥的比特序列。因为明文和密钥的长度一般不一样，所以一般使用流密码或者分组密码来加密。
+
+### DES
+
+DES是一种将64比特的明文加密成64比特的密文的对称密码算法，它的密钥长度是56比特。尽管从规格上来说，DES的密钥长度是64比特，但由于每隔7比特会设置一个校验码，因此实质上其密钥长度是56比特。
+
+DES是以64比特的明文（比特序列）为一个单位来进行加密的，这个64比特的单位称为分组。一般来说，以分组为单位进行处理的密码算法称为分组密码(blockcipher)，DES就是分组密码的一种。
+
+## JavaAPI
+
+JavaAPI支持多种加密算法。如MessageDigest类，可以构建MD5、SHA两种加密算法；Mac类可以构建HMAC加密算法；Cipher类可以构建多种加密算法，如DES、AES、Blowfish对称加密算法，以及RSA、DSA、DH等多种非对称加密算法；Signature类可以用于数字签名和签名验证；Certificate类可用于操作证书；等等。
 
 ### 对称加密
 
-DES（Data Encryption Standard）：最早广泛使用的对称加密算法，现已被AES取代。
+DES（DataEncryptionStandard）：最早广泛使用的对称加密算法，现已被AES取代。
 
-AES（Advanced Encryption Standard）：一种分组加密算法。
+AES（AdvancedEncryptionStandard）：一种分组加密算法。
 
 对称加密速度快，加密后编码表找不到对应的字符，出现乱码。一般结合base64一起使用。
 
 ### MessageDigest类
 
-MD5加密：MD5 主要用做数据一致性验证、数字签名和安全访问认证，而不是用作加密。比如说用户在某个网站注册账户时，输入的密码一般经过 MD5 编码，更安全的做法还会加一层盐（salt），这样密码就具有不可逆性。然后把编码后的密码存入数据库，下次登录的时候把密码 MD5 编码，然后和数据库中的作对比，这样就提升了用户账户的安全性。
+MD5加密：MD5主要用做数据一致性验证、数字签名和安全访问认证，而不是用作加密。比如说用户在某个网站注册账户时，输入的密码一般经过MD5编码，更安全的做法还会加一层盐（salt），这样密码就具有不可逆性。然后把编码后的密码存入数据库，下次登录的时候把密码MD5编码，然后和数据库中的作对比，这样就提升了用户账户的安全性。
 
 SHA全名叫做安全散列算法，是FIPS所认证的安全散列算法，比MD5的安全性更高。
 
 ```java
-public class MDTest {
+publicclassMDTest{
 
-    //支持下面三种算法
-    public static final String KEY_MD5 = "MD5";
-    public static final String SHA= "SHA";
-    public static final String SHA_256 = "SHA_256";
+//支持下面三种算法
+publicstaticfinalStringKEY_MD5="MD5";
+publicstaticfinalStringSHA="SHA";
+publicstaticfinalStringSHA_256="SHA_256";
 
-    public static void main(String[] args) throws NoSuchAlgorithmException {
+publicstaticvoidmain(String[]args)throwsNoSuchAlgorithmException{
 
-        //MessageDigest sha = MessageDigest.getInstance("SHA");
-        MessageDigest sha = MessageDigest.getInstance("MD5");
-        byte[] bytes = "hello world".getBytes(StandardCharsets.UTF_8);
-        sha.update(bytes);
-        byte[] digest = sha.digest();
-        System.out.println(new String(digest, StandardCharsets.UTF_8));
-    }
+//MessageDigestsha=MessageDigest.getInstance("SHA");
+MessageDigestsha=MessageDigest.getInstance("MD5");
+byte[]bytes="helloworld".getBytes(StandardCharsets.UTF_8);
+sha.update(bytes);
+byte[]digest=sha.digest();
+System.out.println(newString(digest,StandardCharsets.UTF_8));
+}
 }
 ```
 
