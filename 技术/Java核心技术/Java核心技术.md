@@ -53,7 +53,7 @@ public class FullName extends FirstName{
         super(firstName);
         this.lastName = lastName;
         //这里使用super.getFirstName()或者this.getFirstName()都行，因为子类没有重写这个方法
-        //这里不能使用this.firstName。因为私有成员只能在本类内部访问，如果是default成员就能在子类只能访问
+        //这里不能使用this.firstName。因为私有成员只能在本类内部访问，如果是protected成员就能在子类之中访问
         this.fullName = super.getFirstName() + "." + this.lastName;
     }
 
@@ -78,6 +78,18 @@ public class FullName extends FirstName{
 ```
 
 ![](Java核心技术.assets/Snipaste_2022-08-03_16-57-23.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-03_21-03-48.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-03_21-06-21.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-03_21-07-35.png)
 
 
 
