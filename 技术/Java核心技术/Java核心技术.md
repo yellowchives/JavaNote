@@ -93,3 +93,19 @@ public class FullName extends FirstName{
 
 
 
+![](Java核心技术.assets/Snipaste_2022-08-04_20-05-41.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-04_20-45-26.png)
+
+
+
+拓展数组大小的方法：Array是java.lang.reflect包的一个工具类
+
+![](Java核心技术.assets/Snipaste_2022-08-04_20-55-33.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-04_21-09-19.png)
+
