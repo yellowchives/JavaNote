@@ -109,3 +109,55 @@ public class FullName extends FirstName{
 
 ![](Java核心技术.assets/Snipaste_2022-08-04_21-09-19.png)
 
+
+
+![](Java核心技术.assets/Snipaste_2022-08-05_17-10-15.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-05_17-14-05.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-05_17-15-33.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-05_17-17-28.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-05_17-20-29.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-23-54.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-25-19.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-29-00.png)
+
+lambda表达式高级：
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-33-50.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-34-00.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-34-25.png)
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-35-58.png)
+
+lambda表示中使用代码块外部的变量时，该变量必须是final的。
+
+
+
+内部类是定义在一个类作用域中的类。使用内部类的原因有两点：
+
+1. 内部类可以对同一个包中的其他类隐藏。
+2. 内部类的方法可以访问这个类作用域中的成员，包括私有的
+
+现在已经很少使用内部类了，大多数情况下内部类都可以被lambda表达式取代。内部类可以访问其外部类的成员，是因为编译器为其隐式添加了外部类对象的引用。可以使用OuterClass.this引用外部类的实例。如果只是想把内部类隐藏，而不想使用任何外部类的成员，可以把内部类声明为静态的。
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-54-36.png)
+
+
+
+![](Java核心技术.assets/Snipaste_2022-08-06_22-54-44.png)
