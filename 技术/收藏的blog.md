@@ -1,9 +1,13 @@
 - java消息摘要：https://www.jianshu.com/p/6fd98612370f
   - byte数组转成16进制字符串：https://www.jianshu.com/p/be4fefab361f
-
 - java加密：https://thinkstu.blog.csdn.net/article/details/126356394
-
 - 编码算法：https://www.liaoxuefeng.com/wiki/1252599548343744/1304227703947297
-
 - 哈希算法：https://www.liaoxuefeng.com/wiki/1252599548343744/1304227729113121
 - 对称加密算法：https://www.liaoxuefeng.com/wiki/1252599548343744/1304227762667553
+- 处理CORS：https://www.liaoxuefeng.com/wiki/1252599548343744/1282384360112162
+- 反射：https://www.liaoxuefeng.com/wiki/1252599548343744/1264799402020448
+- 动态代理：https://www.liaoxuefeng.com/wiki/1252599548343744/1264804593397984
+- 日期和时间：https://www.liaoxuefeng.com/wiki/1252599548343744/1255943660631584
+- 数据库时间类型和 Java 时间类型的最佳实践：https://www.liaoxuefeng.com/wiki/1252599548343744/1303978948165666
+  - https://blog.csdn.net/weinianjie1/article/details/6310770
+- 多线程：https://www.liaoxuefeng.com/wiki/1252599548343744/1306580867874849

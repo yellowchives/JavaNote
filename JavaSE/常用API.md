@@ -817,9 +817,9 @@ public void test() throws NoSuchAlgorithmException {
 }
 ```
 
-
-
 ## 时间日期类
+
+`Epoch Time`是计算从1970年1月1日零点（格林威治时区／GMT+00:00）到现在所经历的秒数，又称为时间戳。根据这个整数，加上时区，就可以格式化输出时间了。Java 中的时间戳是 long 表示的毫秒值，可以使用 `System.currentTimeMills()` 获取。
 
 ### util.Date类
 
