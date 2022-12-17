@@ -1,7 +1,3 @@
-IDEA 全称IntelliJ IDEA，是Java语言开发的集成环境，目前已经渐渐代替了Eclipse的使用。IntelliJ在业界被公认为最好的Java开发工具之一，因其功能强悍、设置人性化，而深受Java、大数据、移动端程序员的喜爱。本着"工欲善其事必先利其器"的精神，本套视频从IDEA的介绍、安装、设置入手，讲解IDEA中项目的创建、模板的使用、断点调试等。
-
-说明：本文档所有截图针对IntelliJ IDEA 2019.2.3 x64版本。
-
 # 一、IntelliJ IDEA  介绍
 
 ## 1、JetBrains  公司介绍
@@ -938,3 +934,13 @@ IntelliJ IDEA 的缓存和索引主要是用来加快文件查询，从而加快
 ![1579162961872](imgs/1579162961872.png)
 
 ![1579162984954](imgs/1579162984954.png)
+
+# 十七、插件
+
+- maven helper
+- mybatisX
+- sequenceDiagram
+- Transalation
+- Rainbow Brackets
+- ignore
+
