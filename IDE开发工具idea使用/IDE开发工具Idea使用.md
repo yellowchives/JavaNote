@@ -943,4 +943,6 @@ IntelliJ IDEA 的缓存和索引主要是用来加快文件查询，从而加快
 - Transalation
 - Rainbow Brackets
 - ignore
+- GsonFormat
+- auto fill java call arguments
 

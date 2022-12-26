@@ -555,21 +555,21 @@ public String fileupload(MultipartFile file,MultipartFile file1,MultipartFile fi
 
 * Rest（ REpresentational State Transfer） 一种网络资源的访问风格，定义了网络资源的访问方式
   * 传统风格访问路径
-     http://localhost/user/get?id=1
-     http://localhost/deleteUser?id=1
+     http://localhost/user/get?id=1
+     http://localhost/deleteUser?id=1
   * Rest风格访问路径
-     http://localhost/user/1
+     http://localhost/user/1
 * Restful是按照Rest风格访问网络资源
 * 优点
-   隐藏资源的访问行为，通过地址无法得知做的是何种操作
-   书写简化
+  隐藏资源的访问行为，通过地址无法得知做的是何种操作
+  书写简化
 
 ### 5.4.2 Rest行为约定方式  
 
- GET（查询） http://localhost/user/1 GET
- POST（保存） http://localhost/user POST
- PUT（更新） http://localhost/user PUT
- DELETE（删除） http://localhost/user DELETE
+GET（查询） http://localhost/user/1 GET
+POST（保存） http://localhost/user POST
+PUT（更新） http://localhost/user PUT
+DELETE（删除） http://localhost/user DELETE
 **注意：**上述行为是约定方式，约定不是规范，可以打破，所以称Rest风格，而不是Rest规范  
 
 ### 5.4.3 Restful开发入门  
@@ -578,11 +578,11 @@ public String fileupload(MultipartFile file,MultipartFile file1,MultipartFile fi
 //设置rest风格的控制器
 @RestController
 //设置公共访问路径，配合下方访问路径使用
-@RequestMapping("/user/")
+@RequestMapping("/user")
 public class UserController {
 
     //rest风格访问路径完整书写方式
-    @RequestMapping("/user/{id}")
+    @GetMapping("/user/{id}")
     //使用@PathVariable注解获取路径上配置的具名变量，该配置可以使用多次
     public String restLocation(@PathVariable Integer id){
         System.out.println("restful is running ....");
@@ -646,8 +646,8 @@ public class UserController {
 </filter-mapping>
 ```
 
- 开启SpringMVC对Restful风格的访问支持过滤器，即可通过页面表单提交PUT与DELETE请求
- 页面表单使用隐藏域提交请求类型，参数名称固定为_method，必须配合提交类型method=post使用
+开启SpringMVC对Restful风格的访问支持过滤器，即可通过页面表单提交PUT与DELETE请求
+页面表单使用隐藏域提交请求类型，参数名称固定为_method，必须配合提交类型method=post使用
 
 ```xml
 <form action="/user/1" method="post">

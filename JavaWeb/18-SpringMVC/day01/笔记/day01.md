@@ -317,10 +317,11 @@ public String requestParam1(String name ,String age){
 }
 ```
 
- **@RequestParam** 的使用
- 类型： 形参注解
- 位置：处理器类中的方法形参前方
- 作用：绑定请求参数与对应处理方法形参间的关系  
+ **@RequestParam** 作用：
+
+1. 形参名和实参名可以不同
+2. 指定是否必须传参
+3. 指定参数的默认值
 
 ```java
 @RequestMapping("/requestParam2")
@@ -353,34 +354,16 @@ public String requestParam3(User user){
 **POJO类**
 
 ```java
+@Data
 public class User {
     private String name;
     private Integer age;
-    
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
-
 }
 ```
 
-
-
 **参数冲突**
- 当POJO类型属性与其他形参出现同名问题时，将被同时赋值
- 建议使用@RequestParam注解进行区分
+当POJO类型属性与其他形参出现同名问题时，将被同时赋值
+建议使用@RequestParam注解进行区分
 访问URL： http://localhost/requestParam4?name=itheima&**age**=14  
 
 ```java
@@ -391,44 +374,17 @@ public String requestParam4(User user,String age){
 }
 ```
 
-
-
 **复杂POJO类型参数**
- 当POJO中出现对象属性时，参数名称与对象层次结构名称保持一致  
+当POJO中出现对象属性时，参数名称与对象层次结构名称保持一致  
 
   访问URL： http://localhost/requestParam5?address.province=beijing  
 
 ```java
+@Data
 public class User {
     private String name;
     private Integer age;
-
     private Address address;
-    
-    public Address getAddress() {
-        return address;
-    }
-
-    public void setAddress(Address address) {
-        this.address = address;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
-
 }
 ```
 
@@ -441,6 +397,8 @@ public String requestParam5(User user){
 ```
 
 ![image-20200426190932459](day01.assets/image-20200426190932459.png)
+
+可以在对象前面加上 **@RequestBody**。使用 @RequestBody 时，前端只能以 JSON 方式传参。
 
 **当POJO中出现List，保存对象数据，参数名称与对象层次结构名称保持一致，使用数组格式描述集合中对象的位置**  
 
@@ -510,7 +468,7 @@ public String requestParam9(String[] nick){
 ```
 
 **集合类型参数**
- 保存简单类型数据，请求参数名与处理器方法形参名保持一致，且请求参数数量＞ 1个
+保存简单类型数据，请求参数名与处理器方法形参名保持一致，且请求参数数量＞ 1个
 访问URL： http://localhost/requestParam10?nick=Jockme&nick=zahc
 
 ```java
@@ -521,19 +479,8 @@ public String requestParam10(@RequestParam("nick") List<String> nick){
 }
 ```
 
- 注意： SpringMVC默认将List作为对象处理，赋值前先创建对象，然后将nick作为对象的属性进行处理。由于
-List是接口，无法创建对象，报无法找到构造方法异常；修复类型为可创建对象的ArrayList类型后，对象可
-以创建，但没有nick属性，因此数据为空。此时需要告知SpringMVC的处理器nick是一组数据，而不是一个单
-一数据。通过@RequestParam注解，将数量大于1个names参数打包成参数数组后， SpringMVC才能识别该数
-据格式，并判定形参类型是否为数组或集合，并按数组或集合对象的形式操作数据。  
-
- **小节**
- 请求POJO类型参数获取
- POJO的简单属性
- POJO的对象属性
- POJO的集合属性（存储简单数据）
- POJO的集合属性（存储对象数据）
- 名称冲突问题  
+注意： SpringMVC默认将List作为对象处理，赋值前先创建对象，然后将nick作为对象的属性进行处理。由于
+List是接口，无法创建对象，报无法找到构造方法异常；修复类型为可创建对象的ArrayList类型后，对象可以创建，但没有nick属性，因此数据为空。此时需要告知SpringMVC的处理器nick是一组数据，而不是一个单一数据。通过@RequestParam注解，将数量大于1个names参数打包成参数数组后， SpringMVC才能识别该数据格式，并判定形参类型是否为数组或集合，并按数组或集合对象的形式操作数据。  
 
 ## 4.4 类型转换器
 
@@ -679,14 +626,8 @@ SpringMVC对接收的数据进行自动类型转换，该工作通过Converter�
 
 ## 4.7 请求映射 @RequestMapping
 
-### 4.7.1 方法注解
-
 * 名称： @RequestMapping
-   类型： 方法注解 
-   位置：处理器类中的方法定义上方
-   作用：绑定请求地址与对应处理方法间的关系
-   范例：
-   访问路径： /requestURL1  
+  绑定请求地址与对应处理方法间的关系
 
 ```java
 @Controller
@@ -697,26 +638,6 @@ public class UserController {
         return "page.jsp";
     }
 }
-```
-
-### 4.7.2 类注解
-
-**名称： @RequestMapping**
- 类型： 类注解
- 位置：处理器类定义上方
- 作用：为当前处理器中所有方法设定公共的访问路径前缀
- 范例：
- 访问路径： /user/requestURL1
-
-```java
-@Controller
-@RequestMapping("/user")
-public class UserController {
-    @RequestMapping("/requestURL2")
-    public String requestURL2() {
-        return "page.jsp";
-    }
-}  
 ```
 
 * 常用属性
