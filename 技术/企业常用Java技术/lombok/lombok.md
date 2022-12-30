@@ -26,6 +26,10 @@
 
 3. idea 中安装 lombok 插件，提供可视化功能。在 idea 的设置——build——compiler——annotation processor 勾选 enable annotation processing。
 
+## 官方文档
+
+https://projectlombok.org/features/
+
 ## 原理
 
 lombok会在编译时将setter、getter等方法插入编译后的字节码文件中。在idea的target/classes下可以看到编译后的文件（也可以在structure 中看）。
@@ -49,50 +53,27 @@ lombok会在编译时将setter、getter等方法插入编译后的字节码文�
    //这就是setter的链式调用。
    ```
 
-6. @Builder：将类转为建造者模式。
+6. @Builder：将类转为建造者模式。@Singular：如果类中有List类型，加在字段上，可以向普通字段一样使用链式调用。
 
    ```java
-   //class文件反编译后的结果
-   public static User.UserBuilder builder() {
-       return new User.UserBuilder();
-   }
-   public static class UserBuilder {
-       private Integer id;
+   @Builder
+   @ToString
+   public class Adult {
        private String name;
-       private Date birthday;
+       private int age;
    
-       UserBuilder() {
-       }
+       @Singular
+       private List<String> cds;
+   }
    
-       public User.UserBuilder id(Integer id) {
-           this.id = id;
-           return this;
-       }
-   
-       public User.UserBuilder name(String name) {
-           this.name = name;
-           return this;
-       }
-   
-       public User.UserBuilder birthday(Date birthday) {
-           this.birthday = birthday;
-           return this;
-       }
-   
-       public User build() {
-           return new User(this.id, this.name, this.birthday);
-       }
-   
-       public String toString() {
-           return "User.UserBuilder(id=" + this.id + ", name=" + this.name + ", birthday=" + this.birthday + ")";
+   public class BuilderTestMain {
+       public static void main(String[] args) {
+           Adult build = Adult.builder().age(10).cd("q").cd("e").cd("w").name("zxc").build();
+           System.out.println(build);
        }
    }
-   //测试代码
-   User user = User.builder().id(2).name("老王").build();
-   //User user = new User.UserBuilder().id(2).name("老王").build();
-   System.out.println(user);
    ```
-
+   
 7. @slf4j：用在类（一般是 controller）上，用来为类快速定义一个日志变量，相当于在类中添加了以下代码：`private Logger log = LoggerFactory.getLogger(this.getClass());`。而且提供了占位输出日志的方法，相当好用。
 
    ```java
@@ -107,7 +88,7 @@ lombok会在编译时将setter、getter等方法插入编译后的字节码文�
    }
    ```
 
-8. @EqualsAndHashCode：生成hashCode和equals方法。很少单独使用，因为@Data包含了。更常见的是@EqualsAndHashCode(callSuper = true)，这样就可以比较从父类集成的属性是否相同了。
+8. @EqualsAndHashCode：生成hashCode和equals方法。很少单独使用，因为@Data包含了。更常见的是**@EqualsAndHashCode(callSuper = true)**，这样就可以比较从父类集成的属性是否相同了。
 
 9. @SuperBuilder：当存在继承关系时，比如Parent类有address属性，使用Son类的builder方法是无法为父类的address设置属性的。lombok1.8提供了解决方法，只要给父类和子类都加上@SuperBuilder，子类也可以直接设置从父类集成来的属性了。
 

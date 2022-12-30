@@ -134,17 +134,57 @@ public static void main(String[] args) {
 
 线程同步是在线程互斥的基础上实现的，java实现同步有synchronized关键字、Lock、volatile关键字、线程变量（ThreadLocal）和原子类，这些后续详细介绍。
 
+# 线程的基本信息
+
+Java 中使用 Thread 实例来描述线程。
+
+<img src="Java并发编程.assets/1-5.jpg"  />
+
+```java
+public class Client0 {
+
+    public static void main(String[] args) {
+        //线程基本信息
+        fun1();
+        Thread thread = Thread.currentThread();
+        System.out.println(thread.getId());
+        System.out.println(thread.getName());
+        System.out.println(thread.getState());
+        System.out.println(thread.getPriority());
+    }
+
+    private static void fun1() {
+        int a = 1;
+        int b = 1;
+        int c = a/b;
+    }
+}
+```
+
+Thread的内部静态枚举类State用于定义Java线程的所有状态。线程创建出来之后就是 NEW 状态，调用 start() 方法后，JVM会将线程交给操作系统去管理，这是状态变成 Runnable。**OS线程区分就绪状态和运行状态，但是在JVM里都是同一种状态RUNNABLE。**
+```java
+public enum State {
+        NEW,
+        RUNNABLE,
+        BLOCKED,
+        WAITING,
+        TIMED_WAITING,
+        TERMINATED;
+    }
+```
+
 # 创建线程的方法
 
-java中创建线程，主要有3种方法：
+创建线程的几种方法都和 Thread 类有关。
 
 - 继承Thread类，重写run方法
 - 实现runable接口
-- 实现callable接口
+- 使用 callable 和 FutureTask
+- 创建线程池
 
 一般工程里不允许1、2这种直接new一个线程去做任务，这样的线程叫“野线程”，正规的是用线程池创建工作线程执行任务。
 
-## 1、实现Runnable接口
+## 实现Runnable接口
 
 首先看一下Runnable接口的代码：
 
@@ -156,8 +196,6 @@ public interface Runnable {
 
 实现runnable接口的类只需实现run方法即可，run方法里写具体这个线程要做什么事情，run方法返回为void，无需传入参数，符合函数式接口，宜选用lambda表达式。
 
-实现runnable接口，创建一个匿名内部类，把匿名内部类的对象作为Thread类的初始化参数，基本都用lambda表达式代替匿名内部类。
-
 ```java
 new Thread(() ->
         {
@@ -168,19 +206,17 @@ new Thread(() ->
         }).start();
 ```
 
-## 2、继承Thread类
+## 继承Thread类
 
 创建一个Thread类的子类，覆写run方法，在run方法里实现要完成的任务。
 
 ```java
 public class MyThread extends Thread{
     private int num;
-
     MyThread(int num)
     {
         this.num = num;
     }
-
     @Override
     public void run() {
         for(int i = 0; i < 100; ++i)
@@ -203,65 +239,25 @@ public static void main(String[] args) {
     }
 ```
 
-### **run（）方法和start（）方法的区别**
+### **run() 方法和 start() 方法的区别**
 
 run()方法是实现Runnable接口时，要实现的方法，实现的是线程具体要做的事情。
 
 start()方法是Thread类里的方法，线程对象调用start()方法，线程进入就绪状态（runnable），待线程分到CPU的时间片时，由runnable状态进入running状态，进入running状态的线程会执行run方法里写的线程具体执行的任务。
 
-举一个例子：
+## 使用 callable 和 FutureTask
 
-```java
-public class MyThread extends Thread{
-    @Override
-    public void run() {
-        System.out.println("ping");
-    }
-}
-```
+这个方法确切的说是java提供的异步框架：callable接口 + Future接口/FutureTask类 + 线程池（ExecutorService接口）。
 
-```java
-public class ConcurrentOneMain {
-    public static void main(String[] args) {
-        MyThread myThread = new MyThread();
-        myThread.run();
-        System.out.println("pong");
-    }
-}
-```
-
-运行结果是：
-
-```text
-ping
-pong
-```
-
-main方法里调用的是run方法，这里并没有启动线程mythread，run方法就跟普通的方法一样，程序串行执行，先打印run方法里的“ping”,再在打印“pong”。
-
-如果把run()方法换成start()方法，意味着启动了线程mythread，程序会异步执行，先打印“ping”还是“pong"取决于mythread线程和main线程哪个先获得CPU的时间片，结果是不确定的。
-
-**真正启动线程的是start（）方法，线程进入running状态后运行run()方法。**
-
-## 3、实现Callable接口
-
-这个方法确切的说是java提供的异步框架：callable接口 + Future接口/FutureTask类 + 线程池（ExecutorService接口），先看callable接口：
+先看callable接口：
 
 ```java
 public interface Callable<V> {
-    /**
-     * Computes a result, or throws an exception if unable to do so.
-     *
-     * @return computed result
-     * @throws Exception if unable to compute a result
-     */
     V call() throws Exception;
 }
 ```
 
-跟runnable接口相同的是，里面仅有一个call方法需要实现。
-
-与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常；加入线程池运行，runnable使用ExecutorService的execute方法，Callable使用submit方法。
+跟runnable接口相同的是，里面仅有一个call方法需要实现。与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常；加入线程池运行，runnable使用 ExecutorService 的execute方法，Callable 使用 submit方法。
 
 举个例子如何使用：
 
@@ -281,7 +277,93 @@ public class MyTask implements Callable<Integer> {
 }
 ```
 
+Future 接口有3个作用：
 
+1. 取消异步执行的任务
+2. 判断异步任务是否完成
+3. 获取异步执行的接口
+
+FutureTask 是 Future 的默认实现类，还是 Runnable 的实现类，同时 FutureTask 内部持有 Callable 的实例。所以 FutureTask 成为了 Callable 和 Thread 之间的桥梁：
+
+![](Java并发编程.assets/1-8.jpg)
+
+通过FutureTask类和Callable接口的联合使用可以创建能够获取异步执行结果的线程，具体步骤如下：
+
+1. 创建一个Callable接口的实现类，并实现其call()方法，编写好异步执行的具体逻辑，可以有返回值。
+2. 使用Callable实现类的实例构造一个FutureTask实例。
+3. 使用FutureTask实例构建Thread线程实例。
+
+4. 调用Thread实例的start()方法启动线程
+5. 调用FutureTask对象的get()方法阻塞性地获得并发线程的执行结果。
+
+```java
+public class Client1 {
+
+    public static void main(String[] args) throws Exception {
+                FutureTask<String> futureTask = new FutureTask<>(() -> "hello world");
+        new Thread(futureTask).start();
+        String s = futureTask.get();
+        System.out.println(s);
+    }
+}
+```
+
+## 创建线程池
+
+Java提供了一个静态工厂类来Executors 来创建线程池。创建固定大小的线程池：
+
+```java
+ExecutorService threadPool = Executors.newFixedThreadPool(3);
+```
+
+ExecutorService 实例负责对池中的线程进行管理和调度。向 ExecutorService 提交任务的常用方法是：
+
+```java
+//方法一：执行一个 Runnable类型的target执行目标实例，无返回
+     void execute(Runnable command);
+//方法二：提交一个 Callable类型的target执行目标实例, 返回一个Future异步任务实例
+     <T> Future<T> submit(Callable<T> task);  
+//方法三：提交一个 Runnable类型的target执行目标实例, 返回一个Future异步任务实例。这种用法主要是使用 Future 对象控制线程的执行，比如取消线程。
+     Future<?> submit(Runnable task);
+```
+
+举个给线程池递交Runnable的任务的例子：
+
+```java
+public class ConcurrentOneMain {
+    public static void main(String[] args) {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(() ->
+        {
+            System.out.println("线程池1开始执行异步任务");
+            for (int i = 0; i < 100; ++i)
+            {
+                System.out.println("线程池1执行异步任务" + String.valueOf(i));
+            }
+        });
+
+        executorService.execute(() ->
+        {
+            System.out.println("线程池2开始执行异步任务");
+            for (int i = 0; i < 100; ++i)
+            {
+                System.out.println("线程池2执行异步任务" + String.valueOf(i));
+            }
+        });
+        executorService.shutdown();
+
+        System.out.println("主线程开始执行任务");
+        for (int i = 0; i < 100; ++i)
+        {
+            System.out.println("主线程执行任务" + String.valueOf(i));
+        }
+    }
+}
+```
+
+首先创建一个线程池，然后往线程池里提交任务（execute方法），一个线程池里可以提交多个任务，任务是实现了Runnable接口的类的对象，最后shutdown线程池。后面会详细介绍线程池。
+
+举个递交 Callable 任务的例子：
 
 ```java
 public class ConcurrentOneMain {
@@ -317,42 +399,34 @@ public class ConcurrentOneMain {
 }
 ```
 
-有关java异步框架后面单独讲。
+实际项目中禁止使用 Executors 创建线程池。
 
-## 4、创建线程池
+# 线程的基本操作
 
-工程中其实并没有像1、2里介绍的直接new Thread来创建线程，这样创建出来的线程是“野线程”，不方便管理，且创建一个线程是要消耗不少资源的，实际工程中创建线程都是通过线程池创建的。3中已经展示了线程池的使用，给线程池递交的是Callable异步任务，下面举个给线程池递交Runnable的任务的例子：
+## 中断
+
+Java语言提供了stop()方法终止正在运行的线程，但是Java将Thread的stop()方法设置为过时，不建议大家使用。在程序中，我们是不能随便中断一个线程的，我们无法知道这个线程正运行在什么状态，它可能持有某把锁，强行中断线程可能导致锁不能释放的问题；或者线程可能在操作数据库，强行中断线程可能导致数据不一致的问题。正是由于调用stop()方法来终止线程可能会产生不可预料的结果，因此不推荐调用stop()方法。
+
+一个线程什么时候可以退出呢？当然只有线程自己才能知道。所以，这里介绍一下Thread的interrupt()方法，此方法本质不是用来中断一个线程，而是将线程设置为中断状态。
+
+当我们调用线程的interrupt()方法时，它有两个作用：
+
+（1）如果此线程处于阻塞状态（如调用了Object.wait()方法），就会立马退出阻塞，并抛出InterruptedException异常，线程就可以通过捕获InterruptedException来做一定的处理，然后让线程退出。更确切地说，如果线程被Object.wait()、Thread.join()和Thread.sleep()三种方法之一阻塞，此时调用该线程的interrupt()方法，该线程将抛出一个InterruptedException中断异常（该线程必须事先预备好处理此异常），从而提早终结被阻塞状态。
+
+（2）如果此线程正处于运行之中，线程就不受任何影响，继续运行，仅仅是线程的中断标记被设置为true。所以，程序可以在适当的位置通过调用isInterrupted()方法来查看自己是否被中断，并执行退出操作。
+
+## join
+
+线程的合并是一个比较难以说清楚的概念，什么是线程的合并呢？举一个例子，假设有两个线程A和B。现在线程A在执行过程中对另一个线程B的执行有依赖，具体的依赖为：线程A需要将线程B的执行流程合并到自己的执行流程中（至少表面如此），这就是线程合并，被动方线程B可以叫作被合并线程。这个例子中的线程A合并线程B的伪代码大致为：
 
 ```java
-public class ConcurrentOneMain {
-    public static void main(String[] args) {
-        ExecutorService executorService = Executors.newCachedThreadPool();
-        executorService.execute(() ->
-        {
-            System.out.println("线程池1开始执行异步任务");
-            for (int i = 0; i < 100; ++i)
-            {
-                System.out.println("线程池1执行异步任务" + String.valueOf(i));
-            }
-        });
-
-        executorService.execute(() ->
-        {
-            System.out.println("线程池2开始执行异步任务");
-            for (int i = 0; i < 100; ++i)
-            {
-                System.out.println("线程池2执行异步任务" + String.valueOf(i));
-            }
-        });
-        executorService.shutdown();
-
-        System.out.println("主线程开始执行任务");
-        for (int i = 0; i < 100; ++i)
-        {
-            System.out.println("主线程执行任务" + String.valueOf(i));
-        }
-    }
-}
+ class ThreadA extends Thread
+ {
+     void run()
+     {
+         Thread threadb = new Thread("thread-b");
+         threadb.join();
+     }
+ }
 ```
 
-首先创建一个线程池，然后往线程池里提交任务（execute方法），一个线程池里可以提交多个任务，任务是实现了Runnable接口的类的对象，最后shutdown线程池。后面会详细介绍线程池。
