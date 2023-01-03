@@ -38,9 +38,9 @@ Java线程可以分为两类：用户线程和守护线程。
 
 **守护线程（Daemon）**
 
-运行在后台，为用户线程服务的线程，当所有用户线程都结束工作时，守护线程会随着JVM一起结束工作，比如垃圾回收用的守护线程。
+运行在后台，为用户线程服务的线程，**当所有用户线程都结束工作时，守护线程会随着JVM一起结束工作**，比如垃圾回收用的守护线程。
 
-通过setDaemon(true)将线程设置为守护线程。
+通过setDaemon(true) 将线程设置为守护线程。要在调用start()方法之前设置，否则线程启动之后就无法修改了。在守护线程中创建的其他线程默认都是守护线程，但可以修改成用户线程。
 
 ## 5、线程状态和优先级
 
@@ -64,15 +64,15 @@ https://tobebetterjavaer.com/thread/thread-state-and-method.html
 
 **（4）waiting**
 
-当线程等待另一个线程通知调度器一个条件时，该线程进入等待状态（waiting），当线程得到调度器通知可以被唤醒时，线程会重新进入runnable状态。
+处于 waiting 状态的线程需要被其他线程显式地唤醒，才会进入就绪状态。
 
 调用如下3个方法会使线程进入等待状态：
 
 > - Object.wait()：使当前线程处于等待状态直到另一个线程唤醒它；
-> - Thread.join()：等待线程执行完毕，底层调用的是Object实例的wait方法；
-> - LockSupport.park()：除非获得调用许可，否则禁用当前线程进行线程调度。
+> - Thread.join()：等待被合并线程执行完毕就会唤醒，底层调用的是Object实例的wait方法；
+> - LockSupport.park()：除非获得调用许可，否则禁用当前线程进行线程调度。唤醒方法是调用 LockSuppert.unpark(Thread)
 
-**（5）time waiting**
+**（5）timed waiting**
 
 计时等待，比waiting多了个条件，当休眠的时间超过设置的时，线程也会被唤醒，重新进入runnable状态。
 
@@ -257,7 +257,7 @@ public interface Callable<V> {
 }
 ```
 
-跟runnable接口相同的是，里面仅有一个call方法需要实现。与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常；加入线程池运行，runnable使用 ExecutorService 的execute方法，Callable 使用 submit方法。
+跟runnable接口相同的是，里面仅有一个call方法需要实现。与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常；要加入线程池运行，runnable使用 ExecutorService 的execute方法，Callable 使用 submit方法。
 
 举个例子如何使用：
 
@@ -283,7 +283,7 @@ Future 接口有3个作用：
 2. 判断异步任务是否完成
 3. 获取异步执行的接口
 
-FutureTask 是 Future 的默认实现类，还是 Runnable 的实现类，同时 FutureTask 内部持有 Callable 的实例。所以 FutureTask 成为了 Callable 和 Thread 之间的桥梁：
+FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有 Callable 的实例。所以 FutureTask 成为了 Callable 和 Thread 之间的桥梁：
 
 ![](Java并发编程.assets/1-8.jpg)
 
@@ -430,3 +430,155 @@ Java语言提供了stop()方法终止正在运行的线程，但是Java将Thread
  }
 ```
 
+join()方法是Thread类的一个实例方法，有三个重载版本：
+
+1. 把当前线程变为TIMED_WAITING，直到被合并线程执行结束
+2. 把当前线程变为TIMED_WAITING，直到被合并线程执行结束，或者等待被合并线程执行millis的时间
+3. 把当前线程变为TIMED_WAITING，直到被合并线程执行结束，或者等待被合并线程执行millis+nanos的时间
+
+# 线程池实战
+
+## 相关类
+
+JUC中线程池相关的架构图：
+
+![](Java并发编程.assets/1-15.jpg)
+
+ThreadPoolExecutor就是大名鼎鼎的“线程池”实现类。ScheduledThreadPoolExecutor提供了“延时执行”和“周期执行”等方法。Executors是一个静态工厂类，它通过静态工厂方法返回ExecutorService、ScheduledExecutorService等线程池示例对象，这些静态工厂方法可以理解为一些快捷的创建线程池的方法。
+
+## 创建线程池的快捷方法
+
+Executors工厂类提供了4种快捷创建线程池的方法：
+
+1. newSingleThreadExecutor()：创建只有一个线程的线程池
+2. newFixedThreadPool(int)：创建固定大小的线程池
+3. newCachedThreadPool()：创建不限数量的线程池，任何提交的任务都将立即执行，但是空闲线程会得到及时回收
+4. newScheduledThreadPool()：创建可定时执行任务的线程池
+
+```java
+public class Client13 {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        //创建有3个线程的线程池
+        ExecutorService es = Executors.newFixedThreadPool(3);
+        //提交Callable获取Future对象
+        for (int i = 0; i < 10; i ++) {
+            Future<String> future = es.submit(new Task13());
+            //从Future获取异步执行的结构
+            System.out.println(future.get()); //可能阻塞
+
+            //future.get(1, TimeUnit.SECONDS); //等待时间后获取执行结果
+            //while (true) {
+            //    if (future.isDone()) { //判断任务是否完成
+            //        String s = future.get();
+            //    }
+            //}
+        }
+        //关闭线程池
+        es.shutdown(); 
+    }
+}
+//Callable接口比Runnable接口多个返回值
+//Callable实例不能作为参数传入Thread的构造器
+class Task13 implements Callable<String> {
+    @Override
+    public String call() throws Exception {
+        try {
+            System.out.println(Thread.currentThread().getName() + "running");
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+        }
+        return "hello";
+    }
+}
+```
+
+## 创建线程池的标准方法
+
+```java
+// 使用标准构造器构造一个普通的线程池
+     public ThreadPoolExecutor(
+       int corePoolSize,            // 核心线程数，即使线程空闲（Idle），也不会回收
+       int maximumPoolSize,                 // 线程数的上限
+       long keepAliveTime, TimeUnit unit,   // 线程最大空闲（Idle）时长 
+       BlockingQueue<Runnable> workQueue,     // 任务的排队队列
+       ThreadFactory threadFactory,                         // 新线程的产生方式
+       RejectedExecutionHandler handler)    // 拒绝策略
+```
+
+1. 核心和最大线程数量：
+
+线程池执行器将会根据corePoolSize和maximumPoolSize自动维护线程池中的工作线程。
+
+2. 阻塞队列：
+
+如果核心线程都很忙，新收到的异步任务会暂存起来。
+
+3. 最大空闲时长：
+
+keepAliveTime 用于设置池内线程最大Idle（空闲）时长（或者说保活时长），如果超过这个时间，默认情况下Idle、非Core线程会被回收。
+
+如果池在使用过程中提交任务的频率变高，也可以调用方法setKeepAliveTime(long，TimeUnit)进行线程存活时间的动态调整，可以将时长延长。如果需要防止Idle线程被终止，可以将Idle时间设置为无限大，具体如下：
+
+     setKeepAliveTime(Long.MAX_VALUE，TimeUnit.NANOSECONDS);
+
+默认情况下，Idle超时策略仅适用于存在超过corePoolSize线程的情况。但若调用了allowCoreThreadTimeOut(true)，则keepAliveTime参数所设置的Idle超时策略也将被应用于核心线程。
+
+### 线程池的任务调度流程
+
+![](Java并发编程.assets/1-16.jpg)
+
+线程池的任务调度流程（包含接收新任务和执行下一个任务）大致如下：
+
+（1）如果当前工作线程数量小于核心线程数量，执行器总是优先创建一个任务线程，而不是从线程队列中获取一个空闲线程。
+
+（2）如果线程池中总的任务数量大于核心线程池数量，新接收的任务将被加入阻塞队列中，一直到阻塞队列已满。在核心线程池数量已经用完、阻塞队列没有满的场景下，线程池不会为新任务创建一个新线程。
+
+（3）当完成一个任务的执行时，执行器总是优先从阻塞队列中获取下一个任务，并开始执行，一直到阻塞队列为空，其中所有的缓存任务被取光。
+
+（4）在核心线程池数量已经用完、阻塞队列也已经满了的场景下，如果线程池接收到新的任务，将会为新任务创建一个线程（非核心线程），并且立即开始执行新任务。
+
+（5）在核心线程都用完、阻塞队列已满的情况下，一直会创建新线程去执行新任务，直到池内的线程总数超出maximumPoolSize。如果线程池的线程总数超过maximumPoolSize，线程池就会拒绝接收任务，当新任务过来时，会为新任务执行拒绝策略。
+
+```java
+public class Client20 {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 100, 100, TimeUnit.SECONDS, new LinkedBlockingDeque<>(100));
+
+        for(int i = 0; i < 5; i ++) {
+            executor.execute(() -> {
+                Thread thread = Thread.currentThread();
+                System.out.println(thread.getName());
+                try {
+                    //无限睡眠
+                    Thread.sleep(Long.MAX_VALUE);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+        while(true) {
+            //每秒，输出线程池的线程数
+            System.out.println("活跃的线程数: " + executor.getActiveCount() + " 任务数量: " + executor.getTaskCount());
+            Thread.sleep(1000);
+        }
+    }
+}
+```
+
+代码运行结果：
+
+```
+活跃的线程数: 1 任务数量: 5
+pool-1-thread-1
+活跃的线程数: 1 任务数量: 5
+活跃的线程数: 1 任务数量: 5
+活跃的线程数: 1 任务数量: 5
+活跃的线程数: 1 任务数量: 5
+......
+```
+
+以上示例创建了最大线程数量maximumPoolSize为100的线程池，仅仅向其中提交了5个任务。理论上，这5个任务都会被执行到，奇怪的是示例中只有1个任务在执行，其他的4个任务都在等待。其他任务被加入到了阻塞队列中，需要等pool-1-thread-1线程执行完第一个任务后，才能依次从阻塞队列取出执行。但是，实例中的第一个任务是一个永远也没有办法完成的任务，所以其他的4个任务只能永远在阻塞队列中等待着。由于参数配置得不合理，因此出现了以上的奇怪现象。
+
+为什么会出现上面的奇怪现象呢？因为例子中的corePoolSize为1，阻塞队列的大小为100，按照线程创建的规则，需要等阻塞队列已满，才会去创建新的线程。例子中加入了5个任务，阻塞队列大小为4（<100），所以线程池的调度器不会去创建新的线程，后面的4个任务只能等待。
