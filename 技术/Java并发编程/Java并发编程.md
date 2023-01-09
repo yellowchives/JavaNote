@@ -281,7 +281,7 @@ Future 接口有3个作用：
 
 1. 取消异步执行的任务
 2. 判断异步任务是否完成
-3. 获取异步执行的接口
+3. 获取异步执行的结果
 
 FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有 Callable 的实例。所以 FutureTask 成为了 Callable 和 Thread 之间的桥梁：
 
