@@ -138,7 +138,7 @@ public static void main(String[] args) {
 
 Java 中使用 Thread 实例来描述线程。
 
-<img src="Java并发编程.assets/1-5.jpg"  />
+<img src="Java并发编程.assets/1-5.jpg" style="zoom: 67%;" />
 
 ```java
 public class Client0 {
@@ -184,59 +184,130 @@ public enum State {
 
 一般工程里不允许1、2这种直接new一个线程去做任务，这样的线程叫“野线程”，正规的是用线程池创建工作线程执行任务。
 
+## 继承Thread类
+
+Thread 类内部有一个空方法 run，需要重写。
+
 ## 实现Runnable接口
 
-首先看一下Runnable接口的代码：
+看一下 Thread 类源码：
 
 ```java
+ package java.lang;
+ public class Thread implements Runnable {
+ ...
+ private Runnable target; //执行目标
+ public void run() {
+ if(this.target != null) {
+ this.target.run(); //调用执行目标的
+run()方法
+ }
+ }
+ public Thread(Runnable target) { //包含执行目标的构
+造器
+ init(null, target, "Thread-" +
+nextThreadNum(), 0);
+ }
+ }
+```
+
+如果target（执行目标）不为空，就 执行target属性的run()方法。而target属性是Thread类的一个实例属 性，并且target属性的类型为Runnable。
+
+再看一下Runnable接口的代码：
+
+```java
+@FunctionalInterface
 public interface Runnable {
     public abstract void run();
 }
 ```
 
-实现runnable接口的类只需实现run方法即可，run方法里写具体这个线程要做什么事情，run方法返回为void，无需传入参数，符合函数式接口，宜选用lambda表达式。
+实现 runnable 接口的类只需实现run方法即可，run方法里写具体这个线程要做什么事情，run方法返回为void，无需传入参数，符合函数式接口，宜选用lambda表达式。
+
+### 优点
+
+实现 Runnable 接口的优点除了避免 Thread 单继承的限制，最重要的是实现了逻辑和数据的更好分离，更适合同一个资源被多段业务逻辑并行处理的场景，因为一个 Runnable 实例可以作为多个 Thread 的参数。例如：
 
 ```java
-new Thread(() ->
-        {
-            for (int i=0; i < 100; ++i)
-            {
-                System.out.println(i);
-            }
-        }).start();
-```
+package com.learnable.userdomain.common.mq;
 
-## 继承Thread类
+import java.util.concurrent.atomic.AtomicInteger;
 
-创建一个Thread类的子类，覆写run方法，在run方法里实现要完成的任务。
+public class Test {
+    private final static int GOODS_NUMBER = 5;//商品总数
 
-```java
-public class MyThread extends Thread{
-    private int num;
-    MyThread(int num)
-    {
-        this.num = num;
-    }
-    @Override
-    public void run() {
-        for(int i = 0; i < 100; ++i)
-        {
-            this.num +=1;
+    static class SalesThread extends Thread {
+        int goodsNumber = GOODS_NUMBER;
+        SalesThread(String name) {
+            super(name);
         }
-        System.out.println(this.num);
+        @Override
+        public void run() {
+            for (int i = 1; i <= GOODS_NUMBER; i ++) {
+                if (this.goodsNumber > 0) {
+                    System.out.println(this.getName() + "卖出一件，还剩" + this.goodsNumber + "件");
+                    goodsNumber --;
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+    }
+
+    static class SalesImpl implements Runnable {
+        AtomicInteger goodsNumber = new AtomicInteger(GOODS_NUMBER);//原子类型
+
+        @Override
+        public void run() {
+            for (int i = 1; i <= GOODS_NUMBER; i ++) {
+                if (this.goodsNumber.get() > 0) {
+                    System.out.println(Thread.currentThread().getName() + "卖出一件，还剩" + this.goodsNumber.getAndDecrement() + "件");
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        for (int i = 0; i < 2; i ++) {
+            Thread thread;
+            thread = new SalesThread("Thread商店" + i);
+            thread.start();
+        }
+
+        Thread.sleep(1000);
+        SalesImpl sales = new SalesImpl();
+        for (int i = 0; i < 2; i ++) {
+            Thread thread;
+            thread = new Thread(sales, "Runnable商店" + i);
+            thread.start();
+        }
     }
 }
-```
-
-
-
-```java
-public static void main(String[] args) {
-        int num = 5;
-        
-        MyThread myThread = new MyThread(num);
-        myThread.start();
-    }
+//运行结果
+Thread商店0卖出一件，还剩5件
+Thread商店1卖出一件，还剩5件
+Thread商店0卖出一件，还剩4件
+Thread商店1卖出一件，还剩4件
+Thread商店1卖出一件，还剩3件
+Thread商店0卖出一件，还剩3件
+Thread商店1卖出一件，还剩2件
+Thread商店0卖出一件，还剩2件
+Thread商店0卖出一件，还剩1件
+Thread商店1卖出一件，还剩1件
+Runnable商店0卖出一件，还剩5件
+Runnable商店1卖出一件，还剩4件
+Runnable商店1卖出一件，还剩3件
+Runnable商店0卖出一件，还剩2件
+Runnable商店0卖出一件，还剩1件
+Runnable商店1卖出一件，还剩0件
 ```
 
 ### **run() 方法和 start() 方法的区别**
@@ -247,19 +318,18 @@ start()方法是Thread类里的方法，线程对象调用start()方法，线程
 
 ## 使用 callable 和 FutureTask
 
-这个方法确切的说是java提供的异步框架：callable接口 + Future接口/FutureTask类 + 线程池（ExecutorService接口）。
+前面两种方式都没法获取异步执行的结果。java提供的异步框架：callable接口 + Future接口/FutureTask类 + 线程池（ExecutorService接口）解决了这个问题。
 
 先看callable接口：
 
 ```java
+@FunctionalInterface
 public interface Callable<V> {
     V call() throws Exception;
 }
 ```
 
-跟runnable接口相同的是，里面仅有一个call方法需要实现。与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常；要加入线程池运行，runnable使用 ExecutorService 的execute方法，Callable 使用 submit方法。
-
-举个例子如何使用：
+与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常。
 
 ```java
 public class MyTask implements Callable<Integer> {
@@ -289,7 +359,7 @@ FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有
 
 通过FutureTask类和Callable接口的联合使用可以创建能够获取异步执行结果的线程，具体步骤如下：
 
-1. 创建一个Callable接口的实现类，并实现其call()方法，编写好异步执行的具体逻辑，可以有返回值。
+1. 创建一个Callable接口的实现类，并实现其call()方法。
 2. 使用Callable实现类的实例构造一个FutureTask实例。
 3. 使用FutureTask实例构建Thread线程实例。
 
@@ -300,7 +370,7 @@ FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有
 public class Client1 {
 
     public static void main(String[] args) throws Exception {
-                FutureTask<String> futureTask = new FutureTask<>(() -> "hello world");
+        FutureTask<String> futureTask = new FutureTask<>(() -> "hello world");
         new Thread(futureTask).start();
         String s = futureTask.get();
         System.out.println(s);
@@ -308,7 +378,9 @@ public class Client1 {
 }
 ```
 
-## 创建线程池
+调用Thread实例的start()方法启动新线程，启动新线程的 run()方法并发执行。其内部的执行过程为：启动Thread实例的run() 方法并发执行后，会执行FutureTask实例的run()方法，最终会并发执行Callable实现类的call()方法。
+
+## 通过线程池创建
 
 Java提供了一个静态工厂类来Executors 来创建线程池。创建固定大小的线程池：
 
@@ -436,17 +508,35 @@ join()方法是Thread类的一个实例方法，有三个重载版本：
 2. 把当前线程变为TIMED_WAITING，直到被合并线程执行结束，或者等待被合并线程执行millis的时间
 3. 把当前线程变为TIMED_WAITING，直到被合并线程执行结束，或者等待被合并线程执行millis+nanos的时间
 
+## yield
+
+yield() 是Thread 提供的静态方法，作用是使当前线程让出cpu的执行权限。
+
+1. yield仅能使一个线程从运行状态转到就绪状态，而不是阻塞状态。
+2. yield不能保证使得当前正在运行的线程迅速转换到就绪状态。
+3. 即使完成了迅速切换，OS 下次线程调度时仍然可能选中此线程
+
+
+
 # 线程池实战
 
-## 相关类
+## JUC的架构
 
-JUC中线程池相关的架构图：
+JUC（java.util.concurrent）中线程池相关的架构图：
 
 ![](Java并发编程.assets/1-15.jpg)
 
-ThreadPoolExecutor就是大名鼎鼎的“线程池”实现类。ScheduledThreadPoolExecutor提供了“延时执行”和“周期执行”等方法。Executors是一个静态工厂类，它通过静态工厂方法返回ExecutorService、ScheduledExecutorService等线程池示例对象，这些静态工厂方法可以理解为一些快捷的创建线程池的方法。
+Executor 接口只有一个 execute() 方法，可以接口一个 Runnable实例。
 
-## 创建线程池的快捷方法
+ExecutorService 接口有 execute() 方法和 submit() 方法。可以执行 Runnable 和 Callable任务。
+
+ThreadPoolExecutor就是大名鼎鼎的“线程池”实现类。可以创建自定义的线程池。
+
+ScheduledThreadPoolExecutor提供了“延时执行”和“周期执行”等方法。
+
+Executors是一个静态工厂类，提供了一些快捷的创建线程池的方法。
+
+## Executors 工厂类 here
 
 Executors工厂类提供了4种快捷创建线程池的方法：
 
