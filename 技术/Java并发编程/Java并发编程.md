@@ -161,7 +161,7 @@ public class Client0 {
 }
 ```
 
-Thread的内部静态枚举类State用于定义Java线程的所有状态。线程创建出来之后就是 NEW 状态，调用 start() 方法后，JVM会将线程交给操作系统去管理，这是状态变成 Runnable。**OS线程区分就绪状态和运行状态，但是在JVM里都是同一种状态RUNNABLE。**
+Thread的内部静态枚举类State用于定义Java线程的所有状态。线程创建出来之后就是 NEW 状态，调用 start() 方法后，JVM 会将线程交给操作系统去管理，此时状态变成 Runnable。**OS线程区分就绪状态和运行状态，但是在JVM里都是同一种状态RUNNABLE。**
 ```java
 public enum State {
         NEW,
@@ -186,32 +186,39 @@ public enum State {
 
 ## 继承Thread类
 
-Thread 类内部有一个空方法 run，需要重写。
+查看一下Thread类的源码，其run()方法的具体代码如下：
+
+```java
+public class Thread implements Runnable {
+    /* What will be run. */
+    private Runnable target;
+    
+    @Override
+    public void run() {
+        if (target != null) {
+            target.run();
+        }
+    }
+    
+    public Thread(Runnable target) {
+        init(null, target, "Thread-" + nextThreadNum(), 0);
+    }
+}
+```
+
+在Thread类中，target的属性值默认为空，如果直接创建一个 Thread 类的实例然后 start()，什么都不会做。
+
+我们可以定义自己的类并继承 Thread，重写 run() ，在里面实现业务代码。
+
+### **run() 和 start() 的区别**
+
+run()方法是实现Runnable接口时，要实现的方法，实现的是线程具体要做的事情。
+
+start()方法是Thread类里的方法，线程对象调用start()方法，线程进入就绪状态（runnable），待线程分到CPU的时间片时，由runnable状态进入running状态，进入running状态的线程会执行run方法里写的线程具体执行的任务。
 
 ## 实现Runnable接口
 
-看一下 Thread 类源码：
-
-```java
- package java.lang;
- public class Thread implements Runnable {
- ...
- private Runnable target; //执行目标
- public void run() {
- if(this.target != null) {
- this.target.run(); //调用执行目标的
-run()方法
- }
- }
- public Thread(Runnable target) { //包含执行目标的构
-造器
- init(null, target, "Thread-" +
-nextThreadNum(), 0);
- }
- }
-```
-
-如果target（执行目标）不为空，就 执行target属性的run()方法。而target属性是Thread类的一个实例属 性，并且target属性的类型为Runnable。
+从上面 Thread 类源码知道：如果target（执行目标）不为空，就执行 target 的 run() 方法。target 的类型为Runnable。
 
 再看一下Runnable接口的代码：
 
@@ -222,105 +229,108 @@ public interface Runnable {
 }
 ```
 
-实现 runnable 接口的类只需实现run方法即可，run方法里写具体这个线程要做什么事情，run方法返回为void，无需传入参数，符合函数式接口，宜选用lambda表达式。
+实现 runnable 接口只需实现run方法即可，run方法里写具体这个线程要做什么事情，run方法返回为void，无需传入参数，符合函数式接口，宜选用lambda表达式。
+
+Thread 有两个构造器可以为 target 赋值：
+
+```
+public Thread(Runnable target)
+public Thread(Runnable target, String name)
+```
 
 ### 优点
 
 实现 Runnable 接口的优点除了避免 Thread 单继承的限制，最重要的是实现了逻辑和数据的更好分离，更适合同一个资源被多段业务逻辑并行处理的场景，因为一个 Runnable 实例可以作为多个 Thread 的参数。例如：
 
 ```java
-package com.learnable.userdomain.common.mq;
+public class SalesDemo {
+    public static final int MAX_AMOUNT = 5; //商品数量
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-public class Test {
-    private final static int GOODS_NUMBER = 5;//商品总数
-
-    static class SalesThread extends Thread {
-        int goodsNumber = GOODS_NUMBER;
-        SalesThread(String name) {
+    //商店商品的销售线程，每条线程异步销售4次
+    static class StoreGoods extends Thread {
+        StoreGoods(String name) {
             super(name);
         }
-        @Override
+
+        private int goodsAmount = MAX_AMOUNT;
+
         public void run() {
-            for (int i = 1; i <= GOODS_NUMBER; i ++) {
-                if (this.goodsNumber > 0) {
-                    System.out.println(this.getName() + "卖出一件，还剩" + this.goodsNumber + "件");
-                    goodsNumber --;
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
+            for (int i = 0; i <= MAX_AMOUNT; i++) {
+                if (this.goodsAmount > 0) {
+                    System.out.println(getName() + " 卖出一件，还剩：" + (--goodsAmount));
+                    sleepMilliSeconds(10);
                 }
             }
+            System.out.println(getName() + "运行结束.");
         }
     }
 
-    static class SalesImpl implements Runnable {
-        AtomicInteger goodsNumber = new AtomicInteger(GOODS_NUMBER);//原子类型
+    //商场商品的target销售目标类，一个商品最多销售4次，可以多人销售
+    static class MallGoods implements Runnable {
+        //多人销售, 可能导致数据出错，使用原子数据类型保障数据安全
+        private AtomicInteger goodsAmount = new AtomicInteger(MAX_AMOUNT);
 
-        @Override
         public void run() {
-            for (int i = 1; i <= GOODS_NUMBER; i ++) {
-                if (this.goodsNumber.get() > 0) {
-                    System.out.println(Thread.currentThread().getName() + "卖出一件，还剩" + this.goodsNumber.getAndDecrement() + "件");
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
+            for (int i = 0; i <= MAX_AMOUNT; i++) {
+                if (this.goodsAmount.get() > 0) {
+                    System.out.println(Thread.currentThread().getName() + " 卖出一件，还剩：" + goodsAmount.decrementAndGet());
+                    sleepMilliSeconds(10);
                 }
             }
+            System.out.println(Thread.currentThread().getName() + "运行结束.");
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        for (int i = 0; i < 2; i ++) {
-            Thread thread;
-            thread = new SalesThread("Thread商店" + i);
+    public static void main(String args[]) throws InterruptedException {
+        System.out.println("商店版本的销售");
+        for (int i = 1; i <= 2; i++) {
+            Thread thread = null;
+            thread = new StoreGoods("店员-" + i);
             thread.start();
         }
 
         Thread.sleep(1000);
-        SalesImpl sales = new SalesImpl();
-        for (int i = 0; i < 2; i ++) {
-            Thread thread;
-            thread = new Thread(sales, "Runnable商店" + i);
+        System.out.println("商场的商品销售");
+        MallGoods mallGoods = new MallGoods();
+        for (int i = 1; i <= 2; i++) {
+            Thread thread = null;
+            thread = new Thread(mallGoods, "商场销售员-" + i);
             thread.start();
         }
+
+        System.out.println(Thread.currentThread().getName() + "运行结束.");
     }
 }
-//运行结果
-Thread商店0卖出一件，还剩5件
-Thread商店1卖出一件，还剩5件
-Thread商店0卖出一件，还剩4件
-Thread商店1卖出一件，还剩4件
-Thread商店1卖出一件，还剩3件
-Thread商店0卖出一件，还剩3件
-Thread商店1卖出一件，还剩2件
-Thread商店0卖出一件，还剩2件
-Thread商店0卖出一件，还剩1件
-Thread商店1卖出一件，还剩1件
-Runnable商店0卖出一件，还剩5件
-Runnable商店1卖出一件，还剩4件
-Runnable商店1卖出一件，还剩3件
-Runnable商店0卖出一件，还剩2件
-Runnable商店0卖出一件，还剩1件
-Runnable商店1卖出一件，还剩0件
+
+商店版本的销售
+店员-1 卖出一件，还剩：4
+店员-2 卖出一件，还剩：4
+店员-2 卖出一件，还剩：3
+店员-1 卖出一件，还剩：3
+店员-2 卖出一件，还剩：2
+店员-1 卖出一件，还剩：2
+店员-1 卖出一件，还剩：1
+店员-2 卖出一件，还剩：1
+店员-2 卖出一件，还剩：0
+店员-1 卖出一件，还剩：0
+店员-1运行结束.
+店员-2运行结束.
+商场的商品销售
+main运行结束.
+商场销售员-1 卖出一件，还剩：4
+商场销售员-2 卖出一件，还剩：3
+商场销售员-2 卖出一件，还剩：2
+商场销售员-1 卖出一件，还剩：1
+商场销售员-1 卖出一件，还剩：0
+商场销售员-2运行结束.
+商场销售员-1运行结束.
 ```
-
-### **run() 方法和 start() 方法的区别**
-
-run()方法是实现Runnable接口时，要实现的方法，实现的是线程具体要做的事情。
-
-start()方法是Thread类里的方法，线程对象调用start()方法，线程进入就绪状态（runnable），待线程分到CPU的时间片时，由runnable状态进入running状态，进入running状态的线程会执行run方法里写的线程具体执行的任务。
 
 ## 使用 callable 和 FutureTask
 
 前面两种方式都没法获取异步执行的结果。java提供的异步框架：callable接口 + Future接口/FutureTask类 + 线程池（ExecutorService接口）解决了这个问题。
 
-先看callable接口：
+先看callable接口：有返回值，允许抛出异常。
 
 ```java
 @FunctionalInterface
@@ -329,7 +339,7 @@ public interface Callable<V> {
 }
 ```
 
-与runnable接口不同的是，支持传入参数，支持返回值，入参和返回值类型（接口里为泛型）相同，且支持抛出异常。
+例子：
 
 ```java
 public class MyTask implements Callable<Integer> {
@@ -347,11 +357,43 @@ public class MyTask implements Callable<Integer> {
 }
 ```
 
+Thread的target属性的类型为 Runnable，而Callable接口与Runnable接口之间没有任何继承关系，显而易见，Callable接口实例没有办法作为Thread线程实例的target来使用。既然如此，那么该如何使用Callable接口创建线程呢？一个在Callable接口与Thread线程之间起到搭桥作用的重要接口马上就要登场了。
+
+这个重要的中间搭桥接口就是RunnableFuture接口，请看RunnableFuture接口的代码：
+
+```java
+public interface RunnableFuture<V> extends Runnable, Future<V> {
+    void run();
+}
+```
+
+通过源代码可以看出：RunnableFuture继承了Runnable接口，从 而保证了其实例可以作为Thread线程实例的target目标；同时，RunnableFuture通过继承Future接口，保证了可以获取未来的异步执行结果。
+
 Future 接口有3个作用：
 
 1. 取消异步执行的任务
 2. 判断异步任务是否完成
 3. 获取异步执行的结果
+
+Future 源码如下：
+
+```java
+public interface Future<V> {
+
+    boolean cancel(boolean mayInterruptIfRunning);
+
+    boolean isCancelled();
+
+    boolean isDone();
+	//阻塞获取异步执行结果
+    V get() throws InterruptedException, ExecutionException;
+    //阻塞获取异常执行结果，可以设置超时时间
+    V get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException;
+}
+```
+
+总体来说，Future是一个对异步任务进行交互、操作的接口。但 是Future仅仅是一个接口，通过它没有办法直接完成对异步任务的操 作，JDK提供了一个默认的实现类——FutureTask。
 
 FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有 Callable 的实例。所以 FutureTask 成为了 Callable 和 Thread 之间的桥梁：
 
@@ -367,18 +409,56 @@ FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有
 5. 调用FutureTask对象的get()方法阻塞性地获得并发线程的执行结果。
 
 ```java
-public class Client1 {
+public class CreateDemo3 {
 
-    public static void main(String[] args) throws Exception {
-        FutureTask<String> futureTask = new FutureTask<>(() -> "hello world");
-        new Thread(futureTask).start();
-        String s = futureTask.get();
-        System.out.println(s);
+    public static final int MAX_TURN = 5;
+    public static final int COMPUTE_TIMES = 100000000;
+
+
+    static class ReturnableTask implements Callable<Long> {
+        //返回并发执行的时间
+        public Long call() throws Exception {
+            long startTime = System.currentTimeMillis();
+            Print.cfo(getCurThreadName() + " 线程运行开始.");
+            Thread.sleep(1000);
+
+            for (int i = 0; i < COMPUTE_TIMES; i++) {
+                int j = i * 10000;
+            }
+            long used = System.currentTimeMillis() - startTime;
+            Print.cfo(getCurThreadName() + " 线程运行结束.");
+            return used;
+        }
+    }
+
+    public static void main(String args[]) throws InterruptedException {
+        ReturnableTask task = new ReturnableTask();
+        FutureTask<Long> futureTask = new FutureTask<Long>(task);
+        Thread thread = new Thread(futureTask, "returnableThread");
+        thread.start();
+
+        Thread.sleep(500);
+        Print.cfo(getCurThreadName() + " 让子弹飞一会儿.");
+        Print.cfo(getCurThreadName() + " 做一点自己的事情.");
+        for (int i = 0; i < COMPUTE_TIMES / 2; i++) {
+            int j = i * 10000;
+        }
+
+        Print.cfo(getCurThreadName() + " 获取并发任务的执行结果.");
+
+        try {
+            Print.cfo(thread.getName() + "线程占用时间：" + futureTask.get());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        Print.cfo(getCurThreadName() + " 运行结束.");
     }
 }
 ```
 
-调用Thread实例的start()方法启动新线程，启动新线程的 run()方法并发执行。其内部的执行过程为：启动Thread实例的run() 方法并发执行后，会执行FutureTask实例的run()方法，最终会并发执行Callable实现类的call()方法。
+returnableThread线程首先执行的是thread.run()方法，然后在 其中会执行到其target(futureTask任务)的run()方法；接着在这个 futureTask.run()方法中会执行futureTask的callable成员的call() 方法，这里的callable成员（ReturnableTask实例)是通过 FutureTask构造器在初始化时传递进来的、自定义的Callable实现类的实例。FutureTask的Callable成员的call()方法执行完成后，会将结果保存在FutureTask内部的outcome实例属性中。
 
 ## 通过线程池创建
 
