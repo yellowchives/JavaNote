@@ -18,7 +18,7 @@ https://www.cnblogs.com/dolphin0520/p/3910667.html
 
 （3）“线程”之间通信比进程之间更简单；
 
-## 3、线程间的调度算法和多线程中的上下文切换
+## 3、调度算法和上下文切换
 
 **调度算法**
 
@@ -50,11 +50,11 @@ https://tobebetterjavaer.com/thread/thread-state-and-method.html
 
 **（1）new**
 
-用new操作符创建一个线程：new Thread(r)，需要给线程分配资源（比如内存）后才能变为runnable状态。
+线程创建成功，但没有调用 start() 方法。
 
 **（2）runnable**
 
-一旦调用了start方线程会进入runnable（就绪）状态，此时线程并没有运行，而是等待CPU临幸自己，当线程进入了CPU给它的时间片后，才真正进入了运行（running）状态。一个线程只能调用start方法一次。
+一旦调用了start方线程会进入runnable状态。
 
 > Java线程的**RUNNABLE**状态其实是包括了传统操作系统线程的**ready**和**running**两个状态的。
 
@@ -69,7 +69,7 @@ https://tobebetterjavaer.com/thread/thread-state-and-method.html
 调用如下3个方法会使线程进入等待状态：
 
 > - Object.wait()：使当前线程处于等待状态直到另一个线程唤醒它；
-> - Thread.join()：等待被合并线程执行完毕就会唤醒，底层调用的是Object实例的wait方法；
+> - thread.join()：等待被合并线程执行完毕就会唤醒，底层调用的是Object实例的wait方法；
 > - LockSupport.park()：除非获得调用许可，否则禁用当前线程进行线程调度。唤醒方法是调用 LockSuppert.unpark(Thread)
 
 **（5）timed waiting**
@@ -468,7 +468,7 @@ Java提供了一个静态工厂类来Executors 来创建线程池。创建固定
 ExecutorService threadPool = Executors.newFixedThreadPool(3);
 ```
 
-ExecutorService 实例负责对池中的线程进行管理和调度。向 ExecutorService 提交任务的常用方法是：
+ExecutorService 线程池接口，负责对线程进行管理和调度。向 ExecutorService 提交任务的常用方法是：
 
 ```java
 //方法一：执行一个 Runnable类型的target执行目标实例，无返回
@@ -555,6 +555,13 @@ public class ConcurrentOneMain {
 
 # 线程的基本操作
 
+## jdk工具
+
+```
+jps: 查看所有JVM里所有的线程id
+jstack tid: 查看指定id的线程堆栈信息
+```
+
 ## 中断
 
 Java语言提供了stop()方法终止正在运行的线程，但是Java将Thread的stop()方法设置为过时，不建议大家使用。在程序中，我们是不能随便中断一个线程的，我们无法知道这个线程正运行在什么状态，它可能持有某把锁，强行中断线程可能导致锁不能释放的问题；或者线程可能在操作数据库，强行中断线程可能导致数据不一致的问题。正是由于调用stop()方法来终止线程可能会产生不可预料的结果，因此不推荐调用stop()方法。
@@ -566,6 +573,8 @@ Java语言提供了stop()方法终止正在运行的线程，但是Java将Thread
 （1）如果此线程处于阻塞状态（如调用了Object.wait()方法），就会立马退出阻塞，并抛出InterruptedException异常，线程就可以通过捕获InterruptedException来做一定的处理，然后让线程退出。更确切地说，如果线程被Object.wait()、Thread.join()和Thread.sleep()三种方法之一阻塞，此时调用该线程的interrupt()方法，该线程将抛出一个InterruptedException中断异常（该线程必须事先预备好处理此异常），从而提早终结被阻塞状态。
 
 （2）如果此线程正处于运行之中，线程就不受任何影响，继续运行，仅仅是线程的中断标记被设置为true。所以，程序可以在适当的位置通过调用isInterrupted()方法来查看自己是否被中断，并执行退出操作。
+
+> Thread.sleep() 被 interrupt() 中断会抛异常。但是 LockSupport.parkNanos() 不会抛异常。
 
 ## join
 
@@ -602,6 +611,8 @@ yield() 是Thread 提供的静态方法，作用是使当前线程让出cpu的�
 
 ## JUC的架构
 
+JUC就是java.util.concurrent工具包的简称，该工具包是从JDK 1.5开始加入JDK的，是用于完成高并发、处理多线程的一个工具包。
+
 JUC（java.util.concurrent）中线程池相关的架构图：
 
 ![](Java并发编程.assets/1-15.jpg)
@@ -610,57 +621,387 @@ Executor 接口只有一个 execute() 方法，可以接口一个 Runnable实例
 
 ExecutorService 接口有 execute() 方法和 submit() 方法。可以执行 Runnable 和 Callable任务。
 
-ThreadPoolExecutor就是大名鼎鼎的“线程池”实现类。可以创建自定义的线程池。
+ThreadPoolExecutor就是大名鼎鼎的“线程池”实现类。用来创建自定义的线程池。
 
 ScheduledThreadPoolExecutor提供了“延时执行”和“周期执行”等方法。
 
 Executors是一个静态工厂类，提供了一些快捷的创建线程池的方法。
 
-## Executors 工厂类 here
+## Executors 工厂类
 
 Executors工厂类提供了4种快捷创建线程池的方法：
 
 1. newSingleThreadExecutor()：创建只有一个线程的线程池
+   1. 任务按顺序提交并执行。唯一线程繁忙时，新提交的任务会假如阻塞队列，阻塞队列无限大。
+
 2. newFixedThreadPool(int)：创建固定大小的线程池
+   1. 如果线程数没有达到“固定数量”，每次提交一个任务线程池内就创建一个新线程，直到线程达到线程池固定的数量。
+   2. 线程池的大小一旦达到“固定数量”就会保持不变，如果某个线程因为执行异常而结束，那么线程池会补充一个新线程。
+   3. 如果池中的所有线程均在繁忙状态，新任务会进入阻塞队列中（无界的阻塞队列）。
+   4. 适用于：需要任务长期执行的场景。弊端：阻塞队列无界，可能耗尽服务器资源。
+
 3. newCachedThreadPool()：创建不限数量的线程池，任何提交的任务都将立即执行，但是空闲线程会得到及时回收
+   1. 在接收新的异步任务target执行目标实例时，如果池内所有线程繁忙，此线程池就会添加新线程来处理任务。
+   2. 此线程池不会对线程池大小进行限制，线程池大小完全依赖于操作系统（或者说JVM）能够创建的最大线程大小。
+   3. 如果部分线程空闲，也就是存量线程的数量超过了处理任务数量，就会回收空闲（60秒不执行任务）线程。
+   4. 适用于：需要快速处理突发性强、耗时较短的任务场景，如Netty的NIO处理场景、REST API接口的瞬时削峰场景。弊端：线程池没有最大线程数量限制，如果大量的异步任务同时提交，可能会因创建线程过多而耗尽资源。
+
 4. newScheduledThreadPool()：创建可定时执行任务的线程池
 
 ```java
-public class Client13 {
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
-        //创建有3个线程的线程池
-        ExecutorService es = Executors.newFixedThreadPool(3);
-        //提交Callable获取Future对象
-        for (int i = 0; i < 10; i ++) {
-            Future<String> future = es.submit(new Task13());
-            //从Future获取异步执行的结构
-            System.out.println(future.get()); //可能阻塞
+public class CreateThreadPoolDemo {
 
-            //future.get(1, TimeUnit.SECONDS); //等待时间后获取执行结果
-            //while (true) {
-            //    if (future.isDone()) { //判断任务是否完成
-            //        String s = future.get();
-            //    }
-            //}
+    public static final int SLEEP_GAP = 500;
+    public static final int MAX_TURN = 5;
+
+    //异步的执行目标类
+    public static class TargetTask implements Runnable {
+        static AtomicInteger taskNo = new AtomicInteger(1);
+        protected String taskName;
+
+        public TargetTask() {
+            taskName = "task-" + taskNo.get();
+            taskNo.incrementAndGet();
         }
-        //关闭线程池
-        es.shutdown(); 
+
+        public void run() {
+
+            Print.tco("任务：" + taskName + " doing");
+            // 线程睡眠一会
+            sleepMilliSeconds(SLEEP_GAP);
+
+            Print.tco(taskName + " 运行结束.");
+        }
+
+        @Override
+        public String toString() {
+            return "TargetTask{" + taskName + '}';
+        }
     }
-}
-//Callable接口比Runnable接口多个返回值
-//Callable实例不能作为参数传入Thread的构造器
-class Task13 implements Callable<String> {
-    @Override
-    public String call() throws Exception {
-        try {
-            System.out.println(Thread.currentThread().getName() + "running");
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
+
+    //异步的执行目标类：执行过程中将发生异常
+    static class TargetTaskWithError extends TargetTask {
+        public void run() {
+            super.run();
+            throw new RuntimeException("Error from " + taskName);
         }
-        return "hello";
+    }
+
+    //测试用例：只有一条线程的线程池
+    @Test
+    public void testSingleThreadExecutor() {
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        for (int i = 0; i < 5; i++) {
+            pool.execute(new TargetTask());
+            pool.submit(new TargetTask());
+        }
+        sleepSeconds(1000);
+        //关闭线程池
+        pool.shutdown();
+    }
+
+
+    //测试用例：只有3条线程固定大小的线程池
+    @Test
+    public void testNewFixedThreadPool() {
+        ExecutorService pool = Executors.newFixedThreadPool(3);
+        for (int i = 0; i < 5; i++) {
+            pool.execute(new TargetTask());
+            pool.submit(new TargetTask());
+        }
+        sleepSeconds(1000);
+        //关闭线程池
+        pool.shutdown();
+    }
+
+    //测试用例：“可缓存线程池”
+    @Test
+    public void testNewCacheThreadPool() {
+        ExecutorService pool = Executors.newCachedThreadPool();
+        for (int i = 0; i < 5; i++) {
+            pool.execute(new TargetTask());
+            pool.submit(new TargetTask());
+        }
+        sleepSeconds(1000);
+        //关闭线程池
+        pool.shutdown();
+    }
+
+    //测试用例：“可调度线程池”
+    @Test
+    public void testNewScheduledThreadPool() {
+        ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(2);
+        for (int i = 0; i < 2; i++) {
+            scheduled.scheduleAtFixedRate(new TargetTask(),
+                    0, 500, TimeUnit.MILLISECONDS);
+            //以上的参数中：
+            // 0表示首次执行任务的延迟时间，500表示每次执行任务的间隔时间
+            //TimeUnit.MILLISECONDS所设置的时间的计时单位为毫秒
+        }
+        sleepSeconds(1000);
+        //关闭线程池
+        scheduled.shutdown();
+    }
+
+    //测试用例：“可调度线程池2”
+    @Test
+    public void testNewScheduledThreadPool2() {
+        ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(0);
+        for (int i = 0; i < 2; i++) {
+            scheduled.scheduleAtFixedRate(new TargetTask(),
+                    0, 500, TimeUnit.MILLISECONDS);
+            //以上的参数中：
+            // 0表示首次执行任务的延迟时间，500表示每次执行任务的间隔时间
+            //TimeUnit.MILLISECONDS所设置的时间的计时单位为毫秒
+        }
+        sleepSeconds(1000);
+        //关闭线程池
+        scheduled.shutdown();
+    }
+
+
+    @org.junit.Test
+    public void testThreadPoolExecutor() {
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                1, //corePoolSize
+                100, //maximumPoolSize
+                100, //keepAliveTime
+                TimeUnit.SECONDS, //unit
+                new LinkedBlockingDeque<>(100));//workQueue
+
+        for (int i = 0; i < 5; i++) {
+            final int taskIndex = i;
+            executor.execute(() ->
+            {
+                Print.tco("taskIndex = " + taskIndex);
+                try {
+                    Thread.sleep(Long.MAX_VALUE);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+        while (true) {
+            Print.tco("- activeCount:" + executor.getActiveCount() +
+                    " - taskCount:" + executor.getTaskCount());
+            sleepSeconds(1);
+        }
+    }
+
+    //一个简单的线程工厂
+    static public class SimpleThreadFactory implements ThreadFactory {
+        static AtomicInteger threadNo = new AtomicInteger(1);
+
+        //实现其唯一的创建线程方法
+        @Override
+        public Thread newThread(Runnable target) {
+            String threadName = "simpleThread-" + threadNo.get();
+            Print.tco("创建一条线程，名称为：" + threadName);
+            threadNo.incrementAndGet();
+            //设置线程名称
+            Thread thread = new Thread(target, threadName);
+            //设置为守护线程
+            thread.setDaemon(true);
+            return thread;
+        }
+    }
+
+
+    @org.junit.Test
+    public void testThreadFactory() {
+        //使用自定义线程工厂，快捷创建线程池
+        ExecutorService pool =
+                Executors.newFixedThreadPool(2, new SimpleThreadFactory());
+        for (int i = 0; i < 5; i++) {
+            pool.submit(new TargetTask());
+        }
+        //等待10秒
+        sleepSeconds(10);
+        Print.tco("关闭线程池");
+        pool.shutdown();
+    }
+
+    //自定义拒绝策略
+    public static class CustomIgnorePolicy implements RejectedExecutionHandler {
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+            // 可做日志记录等
+            Print.tco(r + " rejected; " + " - getTaskCount: " + e.getTaskCount());
+        }
+    }
+
+    @org.junit.Test
+    public void testCustomIgnorePolicy() {
+        int corePoolSize = 2; //核心线程数
+        int maximumPoolSize = 4;  //最大线程数
+        long keepAliveTime = 10;
+        TimeUnit unit = TimeUnit.SECONDS;
+        //最大排队任务数
+        BlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<>(2);
+        //线程工厂
+        ThreadFactory threadFactory = new SimpleThreadFactory();
+        //拒绝和异常策略
+        RejectedExecutionHandler policy = new CustomIgnorePolicy();
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+                corePoolSize,
+                maximumPoolSize,
+                keepAliveTime, unit,
+                workQueue,
+                threadFactory,
+                policy);
+
+        // 预启动所有核心线程
+        pool.prestartAllCoreThreads();
+        for (int i = 1; i <= 10; i++) {
+            pool.execute(new TargetTask());
+        }
+        //等待10秒
+        sleepSeconds(10);
+        Print.tco("关闭线程池");
+        pool.shutdown();
+    }
+
+    //线程本地变量,用于记录线程异步任务的开始执行时间
+    private static final ThreadLocal<Long> START_TIME = new ThreadLocal<>();
+
+    @org.junit.Test
+    public void testHooks() {
+        ExecutorService pool = new ThreadPoolExecutor(2,
+                4, 60,
+                TimeUnit.SECONDS, new LinkedBlockingQueue<>(2)) {
+            @Override
+            protected void terminated() {
+                Print.tco("调度器已经终止!");
+            }
+
+            @Override
+            protected void beforeExecute(Thread t, Runnable target) {
+                Print.tco(target + "前钩子被执行");
+                //记录开始执行时间
+                START_TIME.set(System.currentTimeMillis());
+                super.beforeExecute(t, target);
+            }
+
+
+            @Override
+            protected void afterExecute(Runnable target, Throwable t) {
+                super.afterExecute(target, t);
+                //计算执行时长
+                long time = (System.currentTimeMillis() - START_TIME.get());
+                Print.tco(target + " 后钩子被执行, 任务执行时长（ms）：" + time);
+                //清空本地变量
+                START_TIME.remove();
+            }
+        };
+
+
+        pool.execute(new TargetTask());
+
+        //等待10秒
+        sleepSeconds(10);
+        Print.tco("关闭线程池");
+        pool.shutdown();
+
+    }
+
+
+    @org.junit.Test
+    public void testNewFixedThreadPool2() {
+        //创建一个固定大小线程池
+        ExecutorService fixedExecutorService = Executors.newFixedThreadPool(1);
+        ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) fixedExecutorService;
+        Print.tco(threadPoolExecutor.getMaximumPoolSize());
+        //设置核心线程数
+        threadPoolExecutor.setCorePoolSize(8);
+
+        //创建一个单线程化的线程池
+        ExecutorService singleExecutorService = Executors.newSingleThreadExecutor();
+        //转换成普通线程池， 会抛出运行时异常 java.lang.ClassCastException
+        ((ThreadPoolExecutor) singleExecutorService).setCorePoolSize(8);
+    }
+
+
+    //测试用例：提交和执行
+    @Test
+    public void testSubmit() {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
+        pool.execute(new TargetTaskWithError());
+        /**
+         * submit(Runnable x) 返回一个future。可以用这个future来判断任务是否成功完成。请看下面：
+         */
+        Future future = pool.submit(new TargetTaskWithError());
+
+        try {
+            //如果异常抛出，会在调用Future.get()时传递给调用者
+            if (future.get() == null) {
+                //如果Future的返回为null，任务完成
+                Print.tco("任务完成");
+            }
+        } catch (Exception e) {
+            Print.tco(e.getCause().getMessage());
+        }
+
+
+        sleepSeconds(10);
+        //关闭线程池
+        pool.shutdown();
+    }
+
+    //测试用例：获取异步调用的结果
+    @Test
+    public void testSubmit2() {
+        ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
+        Future<Integer> future = pool.schedule(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                //返回200 - 300 之间的随机数
+                return RandomUtil.randInRange(200, 300);
+            }
+        }, 100, TimeUnit.MILLISECONDS);
+
+        try {
+            Integer result = future.get();
+            Print.tco("异步执行的结果是:" + result);
+        } catch (InterruptedException e) {
+            Print.tco("异步调用被中断");
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            Print.tco("异步调用过程中，发生了异常");
+            e.printStackTrace();
+        }
+        sleepSeconds(10);
+        //关闭线程池
+        pool.shutdown();
+
+    }
+
+
+    //测试用例：优雅关闭
+    @Test
+    public void testShutdownGracefully() {
+        ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2);
+        threadPool.shutdown(); // Disable new tasks from being submitted
+        try {
+            // 设定最大重试次数
+            // 等待 60 s
+            if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                // 调用 shutdownNow 取消正在执行的任务
+                threadPool.shutdownNow();
+                // 再次等待 60 s，如果还未结束，可以再次尝试，或则直接放弃
+                if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                    System.err.println("线程池任务未正常执行结束");
+                }
+            }
+        } catch (InterruptedException ie) {
+            // 重新调用 shutdownNow
+            threadPool.shutdownNow();
+        }
     }
 }
 ```
+
+### shutdonw()
+
+以上用例在最后调用shutdown()方法来关闭线程池。执行 shutdown()方法后，线程池状态变为SHUTDOWN，此时线程池将拒绝新任务，不能再往线程池中添加新任务，否则会抛出 RejectedExecutionException异常。但是，线程池不会立刻退出，直 添加到线程池中的任务都已经处理完成才会退出。还有一个与 shutdown()类似的方法，叫作shutdownNow()，执行shutdownNow()方法后，线程池状态会立刻变成STOP，并试图停止所有正在执行的线程，并且不再处理还在阻塞队列中等待的任务，会返回那些未执行的任务。
 
 ## 创建线程池的标准方法
 
