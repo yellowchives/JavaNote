@@ -567,8 +567,6 @@ Executors工厂类提供了4种快捷创建线程池的方法：
 4. newScheduledThreadPool()：创建可定时执行任务的线程池
    1. newScheduledThreadPool(int coreSizse)：创建指定大小的调度线程池。newSingleThreadScheduledExecutor()：创建单个线程的调度线程池。
 
-> 实际开发禁止使用 Executors 工厂类
-
 
 ```java
 public class CreateThreadPoolDemo {
@@ -925,7 +923,18 @@ public class CreateThreadPoolDemo {
 
 以上用例在最后调用shutdown()方法来关闭线程池。执行 shutdown()方法后，线程池状态变为SHUTDOWN，此时线程池将拒绝新任务，不能再往线程池中添加新任务，否则会抛出 RejectedExecutionException异常。但是，线程池不会立刻退出，直 添加到线程池中的任务都已经处理完成才会退出。还有一个与 shutdown()类似的方法，叫作shutdownNow()，执行shutdownNow()方法后，线程池状态会立刻变成STOP，并试图停止所有正在执行的线程，并且不再处理还在阻塞队列中等待的任务，会返回那些未执行的任务。
 
+### Executors快捷创建线程池的潜在问题
+
+实际开发禁止使用 Executors 工厂类，原因是：
+
+1. FixedThreadPool和SingleThreadPool 这两个工厂方法所创建的线程池，阻塞队列的长度都为Integer.MAX_VALUE，可能会堆积大量的任务，从而导致 OOM。
+2. CachedThreadPool和ScheduledThreadPool 这两个工厂方法所创建的线程池允许创建的线程数量为 Integer.MAX_VALUE，可能会导致创建大量的线程，从而导致OOM。
+
+为了防止OOM，大厂的编程规范都不允许使用Executors创建线程池，而是要求使用标准构造器ThreadPoolExecutor创建线程池。
+
 ## 创建线程池的标准方法
+
+### ThreadPoolExecutor
 
 ```java
 // 使用标准构造器构造一个普通的线程池
@@ -934,7 +943,7 @@ public class CreateThreadPoolDemo {
        int maximumPoolSize,                 // 线程数的上限
        long keepAliveTime, TimeUnit unit,   // 线程最大空闲（Idle）时长 
        BlockingQueue<Runnable> workQueue,     // 任务的排队队列
-       ThreadFactory threadFactory,                         // 新线程的产生方式
+       ThreadFactory threadFactory,           // 新线程的产生方式
        RejectedExecutionHandler handler)    // 拒绝策略
 ```
 
@@ -1009,3 +1018,296 @@ pool-1-thread-1
 以上示例创建了最大线程数量maximumPoolSize为100的线程池，仅仅向其中提交了5个任务。理论上，这5个任务都会被执行到，奇怪的是示例中只有1个任务在执行，其他的4个任务都在等待。其他任务被加入到了阻塞队列中，需要等pool-1-thread-1线程执行完第一个任务后，才能依次从阻塞队列取出执行。但是，实例中的第一个任务是一个永远也没有办法完成的任务，所以其他的4个任务只能永远在阻塞队列中等待着。由于参数配置得不合理，因此出现了以上的奇怪现象。
 
 为什么会出现上面的奇怪现象呢？因为例子中的corePoolSize为1，阻塞队列的大小为100，按照线程创建的规则，需要等阻塞队列已满，才会去创建新的线程。例子中加入了5个任务，阻塞队列大小为4（<100），所以线程池的调度器不会去创建新的线程，后面的4个任务只能等待。
+
+### ThreadFactory
+
+ThreadFactory是Java线程工厂接口，这是一个非常简单的接口， 具体如下：
+
+```java
+package java.util.concurrent;
+public interface ThreadFactory {
+ //唯一的方法：创建一个新线程
+ Thread newThread(Runnable target);
+}
+```
+
+使用Executors创建新的线程池时，也可以基于 ThreadFactory（线程工厂）创建，在创建新线程池时可以指定将要使用的ThreadFactory实例。只不过，如果没有指定的话，就会使用 Executors.defaultThreadFactory 默认实例。使用默认的线程工厂实例所创建的线程全部位于同一个ThreadGroup（线程组）中，具有相同的NORM_PRIORITY（优先级为5），而且都是非守护进程状态。
+
+> 这里提到了两个工厂类，比较容易混淆，故做出说明。Executors 为线程池工厂类，用于快捷创建线程池（Thread Pool）； ThreadFactory为线程工厂类，用于创建线程（Thread）。
+
+### BlockingQueue
+
+Java中的阻塞队列（BlockingQueue）与普通队列相比有一个重要的特点：在阻塞队列为空时会阻塞当前线程的元素获取操作。具体来说，在一个线程从一个空的阻塞队列中获取元素时线程会被阻塞，直到阻塞队列中有了元素；当队列中有元素后，被阻塞的线程会自动被唤醒（唤醒过程不需要用户程序干预）。
+
+BlockingQueue是JUC包的一个超级接口，比较常用的实现类有:
+
+1. ArrayBlockingQueue：是一个数组实现的有界阻塞队列，创建时必须指定大小。
+2. LinkedBlockingQueue：是一个基于链表实现的阻塞队列，不设置容量是就是无界的。静态方法Executors.newSingleThreadExecutor和 Executors.newFixedThreadPool使用了这个队列，而且都是无界的。
+3. PriorityBlockingQueue：是具有优先级的无界队列。
+4. DelayQueue：这是一个无界阻塞延迟队列，底层基于 PriorityBlockingQueue实现，队列中每个元素都有过期时间，当从队列获取元素（元素出队）时，只有已经过期的元素才会出队，队列头部的元素是过期最快的元素。快捷工厂方法 Executors.newScheduledThreadPool所创建的线程池使用此队列。
+5. SynchronousQueue：（同步队列）是一个不存储元素的阻塞队列，每个插入操作必须等到另一个线程的调用移除操作，否则插入操作一直处于阻塞状态，其吞吐量通常高于LinkedBlockingQueue。快捷工厂方法Executors.newCachedThreadPool所创建的线程池使用此队列。与前面的队列相比，这个队列比较特殊，它不会保存提交的任务，而是直接新建一个线程来执行新来的任务
+
+### 钩子方法
+
+ThreadPoolExecutor类提供了三个钩子方法（空方法），这三个钩子方法一般用作被子类重写：
+
+```java
+//任务执行之前的钩子方法（前钩子）
+ protected void beforeExecute(Thread t, Runnable r) { }
+ //任务执行之后的钩子方法（后钩子）
+ protected void afterExecute(Runnable r, Throwable t) { }
+ //线程池终止时的钩子方法（停止钩子）
+ protected void terminated() { }
+```
+
+钩子方法一般用来操作 ThreadLocal。
+
+```java
+public void testHooks() {
+        ExecutorService pool = new ThreadPoolExecutor(2,
+                4, 60,
+                TimeUnit.SECONDS, new LinkedBlockingQueue<>(2)) {
+            @Override
+            protected void terminated() {
+                Print.tco("调度器已经终止!");
+            }
+
+            @Override
+            protected void beforeExecute(Thread t, Runnable target) {
+                Print.tco(target + "前钩子被执行");
+                //记录开始执行时间
+                START_TIME.set(System.currentTimeMillis());
+                super.beforeExecute(t, target);
+            }
+
+
+            @Override
+            protected void afterExecute(Runnable target, Throwable t) {
+                super.afterExecute(target, t);
+                //计算执行时长
+                long time = (System.currentTimeMillis() - START_TIME.get());
+                Print.tco(target + " 后钩子被执行, 任务执行时长（ms）：" + time);
+                //清空本地变量
+                START_TIME.remove();
+            }
+        };
+
+        for (int i = 0; i < 5; i++) {
+            pool.execute(new TargetTask());
+        }
+        //等待10秒
+        sleepSeconds(10);
+        Print.tco("关闭线程池");
+        pool.shutdown();
+
+    }
+```
+
+### 拒绝策略
+
+在线程池的任务缓存队列为有界队列（有容量限制的队列）的时 候，如果队列满了，提交任务到线程池的时候就会被拒绝。总体来说，任务被拒绝有两种情况：1.线程池已经被关闭。2.工作队列已满且maximumPoolSize已满。
+
+无论以上哪种情况任务被拒绝，线程池都会调用 RejectedExecutionHandler实例的rejectedExecution方法。 RejectedExecutionHandler是拒绝策略的接口，JUC为该接口提供了以 下几种实现：
+
+1. AbortPolicy：拒绝策略。这是默认策略，任务被拒绝会抛出RejectedExecutionException。
+2. DiscardPolicy：抛弃策略。任务被丢弃，不会抛异常。
+3. DiscardOldestPolicy：抛弃最老任务策略。 
+4. CallerRunsPolicy：调用者执行策略。如果提交失败，由提交任务的线程自己去执行。
+
+```java
+public static class CustomIgnorePolicy implements RejectedExecutionHandler {
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+            // 可做日志记录等
+            Print.tco(r + " rejected; " + " - getTaskCount: " + e.getTaskCount());
+        }
+    }
+
+    @org.junit.Test
+    public void testCustomIgnorePolicy() {
+        //拒绝和异常策略
+        RejectedExecutionHandler policy = new CustomIgnorePolicy();
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+                2,
+                4,
+                10, TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(2),
+                new SimpleThreadFactory(),
+                policy);
+
+        // 预启动所有核心线程
+        pool.prestartAllCoreThreads();
+        for (int i = 1; i <= 10; i++) {
+            pool.execute(new TargetTask());
+        }
+        //等待10秒
+        sleepSeconds(10);
+        Print.tco("关闭线程池");
+        pool.shutdown();
+    }
+```
+
+### 优雅关闭
+
+```java
+package com.crazymakercircle.util;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+
+// 省略import
+public class ThreadUtil {
+    public static void shutdownThreadPoolGracefully(
+            ExecutorService threadPool) {
+        // 若已经关闭则返回
+        if (!(threadPool instanceof ExecutorService) ||
+                threadPool.isTerminated()) {
+            return;
+        }
+        try {
+            threadPool.shutdown(); //拒绝接受新任务
+        } catch (SecurityException e) {
+            return;
+        } catch (NullPointerException e) {
+            return;
+        }
+        try {
+            // 等待60秒，等待线程池中的任务完成执行
+            if (!threadPool.awaitTermination(60,
+                    TimeUnit.SECONDS)) {
+                // 调用 shutdownNow() 方法取消正在执行的任务
+                threadPool.shutdownNow();
+                // 再次等待60秒，如果还未结束，可以再次尝试，或者直接放弃
+                if (!threadPool.awaitTermination(60,
+                        TimeUnit.SECONDS)) {
+                    System.err.println("线程池任务未正常执行结
+                            束");
+                }
+            }
+        } catch (InterruptedException ie) {
+            // 捕获异常，重新调用 shutdownNow() 方法
+            threadPool.shutdownNow();
+        }
+        // 仍然没有关闭，循环关闭1000次，每次等待10毫秒
+        if (!threadPool.isTerminated()) {
+            try {
+                for (int i = 0; i < 1000; i++) {
+                    if
+                    (threadPool.awaitTermination(10, TimeUnit.MILLISECONDS)) {
+                        break;
+                    }
+                    threadPool.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                System.err.println(e.getMessage());
+            } catch (Throwable e) {
+                System.err.println(e.getMessage());
+            }
+        }
+    }
+    // 省略不相干代码
+}
+```
+
+### 合理的线程数
+
+1. IO 密集型任务 CPU 利用率较低，推荐线程数为 CPU 核心的两倍。
+2. CPU 密集型任务，为防止切换线程导致效率降低，线程数应该与 CPU 核心数相同。
+3. 混合型任务，比如 web 服务器，CPU 时间往往占响应时间的很小比例，业界有一个估算公式：`最佳线程数 = ((线程等待时间 + 线程CPU时间) / 线程CPU时间) * CPU 核数`。也就是说：等待时间占比越多，需要的线程就越多。
+
+## ThreadLocal
+
+在Java的多线程并发执行过程中，为了保证多个线程对变量的安 全访问，可以将变量放到ThreadLocal类型的对象中，使变量在每个线程中都有独立值，不会出现一个线程读取变量时被另一个线程修改的现象。ThreadLocal类通常被翻译为“线程本地变量”类或者“线程局部变量”类。
+
+在JDK 8中，每一个Thread线程内部都有一个 Map（ThreadLocalMap），如果给一个Thread创建多个ThreadLocal实例，然后放置本地数据，那么当前线程的ThreadLocalMap中就会有多个键值对，其中ThreadLocal实例为Key，本地数据为 Value。
+
+使用步骤：
+
+1. 定义一个 ThreadLocal 变量 t。
+2. 调用 t.get() 获取线程变量，为null说明还没有设置
+3. 调用 t.set(value) 设置线程变量
+4. 任务执行完毕清除线程变量：t.remove()
+
+```java
+public class ThreadLocalTest {
+    @Data
+    static class Foo {
+        //实例总数
+        static final AtomicInteger AMOUNT = new AtomicInteger(0);
+        int index = 0;  //对象的编号
+        int bar = 10; //对象的内容
+
+        //构造器
+        public Foo() {
+            index = AMOUNT.incrementAndGet(); //总数增加，并且给对象的编号
+        }
+
+        @Override
+        public String toString() {
+            return index + "@Foo{bar=" + bar + '}';
+        }
+    }
+
+    //定义线程本地变量
+    private static final ThreadLocal<Foo> LOCAL_FOO = new ThreadLocal<Foo>();
+
+    @Test
+    public void testThreadLocal() throws InterruptedException {   
+        ThreadPoolExecutor threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
+
+        //共5个线程
+        for (int i = 0; i < 5; i++) {
+            threadPool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    //获取“线程本地变量”中当前线程所绑定的值
+                    if (LOCAL_FOO.get() == null) {
+                        //设置“线程本地变量”中当前线程所绑定的值
+                        LOCAL_FOO.set(new Foo());
+                    }
+
+                    Print.tco("初始的本地值：" + LOCAL_FOO.get());
+                    //每个线程执行10次
+                    for (int i = 0; i < 10; i++) {
+                        Foo foo = LOCAL_FOO.get();
+                        foo.setBar(foo.getBar() + 1);
+                        sleepMilliSeconds(10);
+
+                    }
+                    Print.tco("累加10次之后的本地值：" + LOCAL_FOO.get());
+
+                    //删除“线程本地变量”中当前线程所绑定的值，对于线程池中的线程尤其重要
+                    LOCAL_FOO.remove();
+                }
+            });
+        }
+    }
+}
+```
+
+在当前线程尚未绑定值时，如果希望从线程本地变量获取到初始值，而且不想采用以上的“判空后设值”这种相对烦琐的方式，可以调用 ThreadLocal.withInitial(…) 静态工厂方法，在定义 ThreadLocal 对象时设置一个获取初始值的回调函数，具体的代码如下：`ThreadLocal LOCAL_FOO = ThreadLocal.withInitial(() -> new Foo());`
+
+### 线程隔离
+
+ThreadLocal的主要价值在于线程隔离，ThreadLocal中的数据只属于当前线程，其本地值对别的线程是不可见的，在多线程环境下，可以防止自己的变量被其他线程篡改。
+
+常见的 ThreadLocal 使用场景为数据库连接独享、处理 Http 请求等。
+
+### 跨函数传递
+
+通常用于同一个线程内，跨类、跨方法传递数据时，如果不用 ThreadLocal，那么相互之间的数据传递势必要靠返回值和参数，这样无形之中增加了这些类或者方法之间的耦合度。
+
+### 源码分析
+
+set(T value) 执行流程：
+
+1. 获得当前线程，然后获得当前线程的ThreadLocalMap成员，暂存于map变量。
+2. 如果map不为空，就将Value设置到map中，当前的 ThreadLocal 作为Key。
+3. 如果map为空，为该线程创建map，然后设置第一个键值对，Key为当前的ThreadLocal实例，Value为set()方法的参数 value 值。
+
+get() 方法：
+
+1. 先尝试获得当前线程，然后获得当前线程的ThreadLocalMap 成员，暂存于map变量。
+2. 如果获得的map不为空，那么以当前ThreadLocal实例为Key尝试获得map中的Entry。
+3. 如果Entry不为空，就返回Entry中的Value。
+4. 如果Entry为空，就通过调用initialValue初始化钩子函数获取ThreadLocal初始值，并设置在map中。如果map不存在，还会给当前线程创建新ThreadLocalMap成员，并绑定第一个键值对。
+
