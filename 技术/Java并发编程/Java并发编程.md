@@ -460,99 +460,6 @@ public class CreateDemo3 {
 
 returnableThread线程首先执行的是thread.run()方法，然后在 其中会执行到其target(futureTask任务)的run()方法；接着在这个 futureTask.run()方法中会执行futureTask的callable成员的call() 方法，这里的callable成员（ReturnableTask实例)是通过 FutureTask构造器在初始化时传递进来的、自定义的Callable实现类的实例。FutureTask的Callable成员的call()方法执行完成后，会将结果保存在FutureTask内部的outcome实例属性中。
 
-## 通过线程池创建
-
-Java提供了一个静态工厂类来Executors 来创建线程池。创建固定大小的线程池：
-
-```java
-ExecutorService threadPool = Executors.newFixedThreadPool(3);
-```
-
-ExecutorService 线程池接口，负责对线程进行管理和调度。向 ExecutorService 提交任务的常用方法是：
-
-```java
-//方法一：执行一个 Runnable类型的target执行目标实例，无返回
-     void execute(Runnable command);
-//方法二：提交一个 Callable类型的target执行目标实例, 返回一个Future异步任务实例
-     <T> Future<T> submit(Callable<T> task);  
-//方法三：提交一个 Runnable类型的target执行目标实例, 返回一个Future异步任务实例。这种用法主要是使用 Future 对象控制线程的执行，比如取消线程。
-     Future<?> submit(Runnable task);
-```
-
-举个给线程池递交Runnable的任务的例子：
-
-```java
-public class ConcurrentOneMain {
-    public static void main(String[] args) {
-        ExecutorService executorService = Executors.newCachedThreadPool();
-        executorService.execute(() ->
-        {
-            System.out.println("线程池1开始执行异步任务");
-            for (int i = 0; i < 100; ++i)
-            {
-                System.out.println("线程池1执行异步任务" + String.valueOf(i));
-            }
-        });
-
-        executorService.execute(() ->
-        {
-            System.out.println("线程池2开始执行异步任务");
-            for (int i = 0; i < 100; ++i)
-            {
-                System.out.println("线程池2执行异步任务" + String.valueOf(i));
-            }
-        });
-        executorService.shutdown();
-
-        System.out.println("主线程开始执行任务");
-        for (int i = 0; i < 100; ++i)
-        {
-            System.out.println("主线程执行任务" + String.valueOf(i));
-        }
-    }
-}
-```
-
-首先创建一个线程池，然后往线程池里提交任务（execute方法），一个线程池里可以提交多个任务，任务是实现了Runnable接口的类的对象，最后shutdown线程池。后面会详细介绍线程池。
-
-举个递交 Callable 任务的例子：
-
-```java
-public class ConcurrentOneMain {
-    public static void main(String[] args) {
-        ExecutorService executorService = Executors.newCachedThreadPool();
-        MyTask myTask = new MyTask();
-        Future<Integer> result = executorService.submit(myTask);
-        executorService.shutdown();
-
-        System.out.println("开始执行主线程任务");
-        int sum = 0;
-        for (int i = 0; i < 100; ++i)
-        {
-            System.out.println("正在执行主线程任务，当前i值为" + String.valueOf(i));
-            sum +=i;
-        }
-        System.out.println("主线程执行完毕，sum的值为: " + String.valueOf(sum));
-
-        // 获得异步任务的结果
-        try
-        {
-            System.out.println("异步线程执行完毕，sum的值为: " + result.get());
-        }
-        catch(InterruptedException e)
-        {
-            e.printStackTrace();
-        }
-        catch(ExecutionException e)
-        {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
-实际项目中禁止使用 Executors 创建线程池。
-
 # 线程的基本操作
 
 ## jdk工具
@@ -609,6 +516,8 @@ yield() 是Thread 提供的静态方法，作用是使当前线程让出cpu的�
 
 # 线程池实战
 
+实际开发中，都是使用线程池。
+
 ## JUC的架构
 
 JUC就是java.util.concurrent工具包的简称，该工具包是从JDK 1.5开始加入JDK的，是用于完成高并发、处理多线程的一个工具包。
@@ -619,7 +528,16 @@ JUC（java.util.concurrent）中线程池相关的架构图：
 
 Executor 接口只有一个 execute() 方法，可以接口一个 Runnable实例。
 
-ExecutorService 接口有 execute() 方法和 submit() 方法。可以执行 Runnable 和 Callable任务。
+ExecutorService 接口负责管理和调度线程，有 execute() 方法和 submit() 方法，可以执行 Runnable 和 Callable任务。
+
+```java
+//方法一：执行一个 Runnable类型的target执行目标实例，无返回
+     void execute(Runnable command);
+//方法二：提交一个 Callable类型的target执行目标实例, 返回一个Future异步任务实例
+     <T> Future<T> submit(Callable<T> task);  
+//方法三：提交一个 Runnable类型的target执行目标实例, 返回一个Future异步任务实例。这种用法主要是使用 Future 对象控制线程的执行，比如取消线程。
+     Future<?> submit(Runnable task);
+```
 
 ThreadPoolExecutor就是大名鼎鼎的“线程池”实现类。用来创建自定义的线程池。
 
@@ -647,6 +565,10 @@ Executors工厂类提供了4种快捷创建线程池的方法：
    4. 适用于：需要快速处理突发性强、耗时较短的任务场景，如Netty的NIO处理场景、REST API接口的瞬时削峰场景。弊端：线程池没有最大线程数量限制，如果大量的异步任务同时提交，可能会因创建线程过多而耗尽资源。
 
 4. newScheduledThreadPool()：创建可定时执行任务的线程池
+   1. newScheduledThreadPool(int coreSizse)：创建指定大小的调度线程池。newSingleThreadScheduledExecutor()：创建单个线程的调度线程池。
+
+> 实际开发禁止使用 Executors 工厂类
+
 
 ```java
 public class CreateThreadPoolDemo {
@@ -1016,23 +938,17 @@ public class CreateThreadPoolDemo {
        RejectedExecutionHandler handler)    // 拒绝策略
 ```
 
-1. 核心和最大线程数量：
+1. 核心和最大线程数量：线程池执行器将会根据corePoolSize和maximumPoolSize自动维护线程池中的工作线程。
+   1. 接收到新任务时，如果当前工作线程数少于 corePoolSize ，即使有空闲的线程，也会创建一个新线程来处理该请求，直到线程数达到corePoolSize。
+   2. 如果当前工作线程数多于corePoolSize数量，但小于 maximumPoolSize数量，那么仅当任务排队队列已满时才会创建新线程。通过设置corePoolSize和maximumPoolSize相同，可以创建一个固定大小的线程池。
+   3. 当maximumPoolSize被设置为无界值（如 Integer.MAX_VALUE）时，线程池可以接收任意数量的并发任务。
+   4. corePoolSize 和 maximumPoolSize 不仅能在线程池构造时设 置，也可以调用 setCorePoolSize() 和 setMaximumPoolSize() 两个方法进行动态更改。
 
-线程池执行器将会根据corePoolSize和maximumPoolSize自动维护线程池中的工作线程。
+2. 阻塞队列：如果核心线程都很忙，新收到的异步任务会暂存起来。
 
-2. 阻塞队列：
-
-如果核心线程都很忙，新收到的异步任务会暂存起来。
-
-3. 最大空闲时长：
-
-keepAliveTime 用于设置池内线程最大Idle（空闲）时长（或者说保活时长），如果超过这个时间，默认情况下Idle、非Core线程会被回收。
-
-如果池在使用过程中提交任务的频率变高，也可以调用方法setKeepAliveTime(long，TimeUnit)进行线程存活时间的动态调整，可以将时长延长。如果需要防止Idle线程被终止，可以将Idle时间设置为无限大，具体如下：
-
-     setKeepAliveTime(Long.MAX_VALUE，TimeUnit.NANOSECONDS);
-
-默认情况下，Idle超时策略仅适用于存在超过corePoolSize线程的情况。但若调用了allowCoreThreadTimeOut(true)，则keepAliveTime参数所设置的Idle超时策略也将被应用于核心线程。
+3. 最大空闲时长：keepAliveTime 用于设置池内线程最大Idle（空闲）时长（或者说保活时长），如果超过这个时间，默认情况下Idle、非Core线程会被回收。
+   1. 如果池在使用过程中提交任务的频率变高，也可以调用方法setKeepAliveTime(long，TimeUnit)进行线程存活时间的动态调整，可以将时长延长。如果需要防止Idle线程被终止，可以将Idle时间设置为无限大，具体如下：` setKeepAliveTime(Long.MAX_VALUE，TimeUnit.NANOSECONDS);`
+   1. 默认情况下，Idle超时策略仅适用于存在超过corePoolSize线程的情况。但若调用了allowCoreThreadTimeOut(true)，则keepAliveTime参数所设置的Idle超时策略也将被应用于核心线程。
 
 ### 线程池的任务调度流程
 
