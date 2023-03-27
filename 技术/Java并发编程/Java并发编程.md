@@ -393,7 +393,7 @@ public interface Future<V> {
 }
 ```
 
-总体来说，Future是一个对异步任务进行交互、操作的接口。但 是Future仅仅是一个接口，通过它没有办法直接完成对异步任务的操 作，JDK提供了一个默认的实现类——FutureTask。
+总体来说，Future是一个对异步任务进行交互、操作的接口。但 是Future仅仅是一个接口，通过它没有办法直接完成对异步任务的操作，JDK提供了一个默认的实现类——FutureTask。
 
 FutureTask 是 Future 和 Runnable 的实现类，同时 FutureTask 内部持有 Callable 的实例。所以 FutureTask 成为了 Callable 和 Thread 之间的桥梁：
 
