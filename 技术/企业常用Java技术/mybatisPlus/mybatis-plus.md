@@ -99,6 +99,8 @@
    @Builder
    @TableName("school") //实体类和表名不一致时指定表名
    public class SchoolPO {
+       
+       @TableId(value = "id", type = IdType.AUTO)
        private Integer id;
    
        private Integer schoolNumber;
@@ -116,7 +118,8 @@
        private String arrangement;
    
        private String period;
-   
+   	
+       @TableField("status")
        private Integer status;
    
        private Date createTime;
