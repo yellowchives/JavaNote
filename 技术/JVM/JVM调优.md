@@ -6,6 +6,7 @@ option是JVM的参数，args是main()的参数。
 1. `-Xms10m`：设置heap的最小空间
 1. `-Xss128k`：设置栈的最大空间
 1. `-XX:+PrintGC`：输出GC的日志
+1. `-X:loggc`：输出GC的日志(jdk9以上推荐)
 1. `-server`：启用server模式。此模式下才能启用逃逸分析
 1. `-XX:+DoEscapeAnalysis`：启用逃逸分析
 1. `-XX:+EliminateAllocations`：开启标量替换（默认开启），允许将对象打散分配在栈上
