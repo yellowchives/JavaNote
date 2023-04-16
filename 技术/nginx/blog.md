@@ -1,0 +1,4 @@
+- nginx 日志切割
+-  nginx 负载均衡配置
+- nginx 控制浏览器缓存、反向代理缓存
+- nginx 开启 https 访问
