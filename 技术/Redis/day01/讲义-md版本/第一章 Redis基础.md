@@ -234,10 +234,11 @@ ln -s redis-5.0.0 redis
 daemonize yes
 ```
 
-绑定主机地址，允许外部访问。同时要设置密码。这样设置之后，客户端输入 auth 123456 就可以访问了。
+绑定主机地址，关闭保护模式，同时要设置密码。这样设置之后，远程客户端输入 auth 123456 就可以访问了。
 
 ```bash
 bind 0.0.0.0
+protected-mode no
 requirepass 123456
 ```
 
