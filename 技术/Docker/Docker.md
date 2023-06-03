@@ -14,6 +14,8 @@ windows 推荐安装 wsl 和 docker-desktop
 
 查看 docker images
 
+查看运行中的容器 docker ps
+
 搜索 docker search mysql
 
 下载 docker pull mysql[:TAG] 默认latest
@@ -81,3 +83,5 @@ options:
 提交容器成为镜像 docker commit
 
 容器日志：`docker logs id`
+
+> 安装mongo https://zhuanlan.zhihu.com/p/610560696
